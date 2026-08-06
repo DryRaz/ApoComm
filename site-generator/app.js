@@ -103,6 +103,87 @@
       .replace(/'/g, "&#39;");
   }
 
+  function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function capIfSentenceStart(word, offset, string) {
+    var before = string.slice(0, offset);
+    var atStart = before.length === 0 || /[.!?]["')\]]*\s+$/.test(before);
+    return atStart ? word.charAt(0).toUpperCase() + word.slice(1) : word;
+  }
+
+  // Best-effort conversion of third-person/plural biographical text into
+  // first-person singular, so a public page reads as the missionary's own
+  // voice even though MissionSummary/MainObjective are often written about
+  // them by staff (see apostello-onboarding skill). This is a deterministic
+  // rule-based pass, not real NLP: it reliably handles "<Name> is/was/does/
+  // verb-s ...", gendered pronouns, and "we/our" plural — the common
+  // patterns in this data — but a construction it doesn't recognize (e.g.
+  // "<Name>" as the object of a verb with no preposition) can slip through
+  // unconverted.
+  function toFirstPerson(text, firstName, lastName) {
+    if (!text) return text;
+    var result = text;
+    var names = [];
+    if (firstName && lastName) names.push(escapeRegex((firstName + " " + lastName).trim()));
+    if (firstName) names.push(escapeRegex(firstName));
+
+    if (names.length) {
+      var nameAlt = names.join("|");
+
+      result = result.replace(new RegExp("\\b(?:" + nameAlt + ")'s\\b", "g"), function (m, offset, string) {
+        return capIfSentenceStart("my", offset, string);
+      });
+
+      var auxMap = [
+        ["\\s+is\\b", "I'm"], ["\\s+are\\b", "I'm"], ["\\s+was\\b", "I was"],
+        ["\\s+has\\b", "I have"], ["\\s+had\\b", "I had"], ["\\s+will\\b", "I'll"],
+        ["\\s+does\\b", "I do"], ["\\s+did\\b", "I did"]
+      ];
+      auxMap.forEach(function (pair) {
+        var re = new RegExp("\\b(?:" + nameAlt + ")" + pair[0], "gi");
+        result = result.replace(re, function (m, offset, string) {
+          return capIfSentenceStart(pair[1], offset, string);
+        });
+      });
+
+      var OBJECT_PRECEDERS = /\b(to|with|for|from|about|of|near|alongside|beside|behind|before|after|than|like|upon|unto)\s*$/i;
+      result = result.replace(new RegExp("\\b(?:" + nameAlt + ")\\b", "g"), function (m, offset, string) {
+        var before = string.slice(Math.max(0, offset - 20), offset);
+        var word = OBJECT_PRECEDERS.test(before) ? "me" : "I";
+        return capIfSentenceStart(word, offset, string);
+      });
+    }
+
+    result = result.replace(/\bwe\s+are\b|\bwe're\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("I'm", offset, string);
+    });
+    result = result.replace(/\bwe\s+were\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("I was", offset, string);
+    });
+    result = result.replace(/\b(?:she|he|they)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("I", offset, string);
+    });
+    result = result.replace(/\b(?:him|them|us)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("me", offset, string);
+    });
+    result = result.replace(/\b(?:her|his|their|our)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("my", offset, string);
+    });
+    result = result.replace(/\b(?:hers|theirs|ours)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("mine", offset, string);
+    });
+    result = result.replace(/\b(?:herself|himself|themselves|ourselves)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("myself", offset, string);
+    });
+    result = result.replace(/\bwe\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("I", offset, string);
+    });
+
+    return result;
+  }
+
   function hookLine(missionSummary) {
     var text = missionSummary.trim();
     if (!text) return "";
@@ -128,12 +209,12 @@
     if (parts.length === 0) return "";
     return (
       '<section class="section where">\n' +
-      '  <h2>Where they serve</h2>\n' +
+      '  <h2>Where I serve</h2>\n' +
       '  <p class="location">\n' +
       '    <svg class="pin" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">\n' +
       '      <path d="M12 2C7.6 2 4 5.6 4 10c0 5.4 7 11.5 7.3 11.7a1 1 0 0 0 1.4 0C13 21.5 20 15.4 20 10c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/>\n' +
       '    </svg>\n' +
-      "    " + parts.join(", ") + "\n" +
+      "    I'm serving in " + parts.join(", ") + "\n" +
       "  </p>\n" +
       "</section>"
     );
@@ -158,7 +239,9 @@
   function buildSiteHtml(fields, security) {
     var fullName = (fields.FirstName + " " + fields.LastName).trim();
     var title = escapeHtml(fullName) + " — Apostello Comm";
-    var hook = escapeHtml(hookLine(fields.MissionSummary));
+    var summaryFirstPerson = toFirstPerson(fields.MissionSummary, fields.FirstName, fields.LastName);
+    var objectiveFirstPerson = toFirstPerson(fields.MainObjective, fields.FirstName, fields.LastName);
+    var hook = escapeHtml(hookLine(summaryFirstPerson));
     var mailHref = "mailto:" + encodeURIComponent(fields.Email).replace(/%40/g, "@");
 
     var whereSection = buildWhereSection(fields, security);
@@ -183,16 +266,17 @@
       "</header>\n" +
       '<main class="container">\n' +
       '  <section class="section about">\n' +
-      "    <h2>About the mission</h2>\n" +
-      "    <p>" + escapeHtml(fields.MissionSummary) + "</p>\n" +
+      "    <h2>About me</h2>\n" +
+      "    <p>" + escapeHtml(summaryFirstPerson) + "</p>\n" +
       (fields.SendingOrganization
-        ? '    <p class="sent-by">Sent by ' + escapeHtml(fields.SendingOrganization) + "</p>\n"
+        ? '    <p class="sent-by">I&#39;m sent by ' + escapeHtml(fields.SendingOrganization) + "</p>\n"
         : "") +
       "  </section>\n" +
       (whereSection ? "  " + whereSection.replace(/\n/g, "\n  ") + "\n" : "") +
       '  <section class="section involved">\n' +
       "    <h2>Get involved</h2>\n" +
-      (fields.MainObjective ? "    <p>" + escapeHtml(fields.MainObjective) + "</p>\n" : "") +
+      '    <p class="cta-lead">Here&#39;s how you can partner with me:</p>\n' +
+      (objectiveFirstPerson ? "    <p>" + escapeHtml(objectiveFirstPerson) + "</p>\n" : "") +
       '    <a class="cta" href="' + mailHref + '">Get in touch</a>\n' +
       "  </section>\n" +
       "  " + buildPhotoSection().replace(/\n/g, "\n  ") + "\n" +

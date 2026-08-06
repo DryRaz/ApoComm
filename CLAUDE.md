@@ -34,6 +34,7 @@ Takes one pasted 36-column TSV row (the same format the registration form produc
 - The photo section is three placeholder `.photo-slot` divs, each preceded by an HTML comment (`<!-- PHOTO n: replace... -->`) marking where to paste a real `<img>` later.
 - `SITE_CSS` is inlined into the generated page's `<style>` tag so the output is a single portable file with no external requests (no font/CDN loads).
 - The generator UI shows a `security-decision` summary (SecuritySensitive value, and whether country/city will be shown) so a human can audit the gate's decision before trusting or publishing the output.
+- `toFirstPerson()` rewrites `MissionSummary`/`MainObjective` (which are typically captured in third person by staff — see `apostello-onboarding`) into first-person singular before they're shown on the public page, since the site is meant to read in the missionary's own voice. It's a deterministic rule-based pass (name/pronoun substitution, verb-form fixes for common auxiliaries), not NLP — good enough for the patterns this data actually contains, but a construction it doesn't recognize (e.g. the missionary's name as a verb's object with no preceding preposition) can slip through unconverted. Duplicated verbatim in the newsletter generator rather than shared, consistent with these tools' standalone-file pattern.
 
 ### Monthly newsletter intake (`newsletter-intake/index.html`, `newsletter-intake/style.css`, `newsletter-intake/app.js`)
 
@@ -52,6 +53,7 @@ Takes one 36-column registration row and one 8-column intake row, and drafts a p
 - Content and template chrome (labels, intro/CTA phrasing, sign-off) are localized to `PrimaryLanguage` via a small `TEMPLATES` dictionary (English/French/Spanish/Portuguese, detected by `detectLanguage()`, defaulting to English). The missionary's own free text (`MissionSummary`, `Highlight`, etc.) is never machine-translated — only the surrounding scaffolding changes language.
 - If the registration and intake rows carry different `ClientID`s, a non-blocking `mismatch-warning` banner fires — this doesn't block generation (unlike the security gate) since a human is expected to read and correct it before sending.
 - The `security-decision` panel lists, per topic, whether it was included or omitted, plus which `AnythingToAvoid` terms were found and stripped — the same audit-before-publish pattern as the site generator.
+- The whole newsletter reads in the missionary's own first-person voice: template chrome (intro, CTA, sign-off) is hand-written in first person per language; `MissionSummary` (used in the intro) and the monthly free-text answers (`Highlight`/`PrayerRequest`/`NumbersUpdate`, which occasionally slip into "we") are passed through the same `toFirstPerson()` converter as the site generator before being interpolated. Subject lines and the sign-off name are left as a name (third person there is expected — a reader needs to know whose update they're opening).
 
 ## Domain context
 

@@ -143,6 +143,85 @@
     return { text: result.trim(), applied: applied };
   }
 
+  // ---- first-person conversion ---------------------------------------
+
+  function capIfSentenceStart(word, offset, string) {
+    var before = string.slice(0, offset);
+    var atStart = before.length === 0 || /[.!?]["')\]]*\s+$/.test(before);
+    return atStart ? word.charAt(0).toUpperCase() + word.slice(1) : word;
+  }
+
+  // Best-effort conversion of third-person/plural text into first-person
+  // singular, so the newsletter reads in the missionary's own voice even
+  // though MissionSummary is often written about them by staff (see
+  // apostello-onboarding skill), and monthly answers occasionally slip
+  // into "we". Deterministic rule-based pass, not real NLP: reliably
+  // handles "<Name> is/was/does/verb-s ...", gendered pronouns, and "we/
+  // our" — the common patterns in this data — but an unrecognized
+  // construction (e.g. "<Name>" as a verb's object with no preposition)
+  // can slip through unconverted.
+  function toFirstPerson(text, firstName, lastName) {
+    if (!text) return text;
+    var result = text;
+    var names = [];
+    if (firstName && lastName) names.push(escapeRegex((firstName + " " + lastName).trim()));
+    if (firstName) names.push(escapeRegex(firstName));
+
+    if (names.length) {
+      var nameAlt = names.join("|");
+
+      result = result.replace(new RegExp("\\b(?:" + nameAlt + ")'s\\b", "g"), function (m, offset, string) {
+        return capIfSentenceStart("my", offset, string);
+      });
+
+      var auxMap = [
+        ["\\s+is\\b", "I'm"], ["\\s+are\\b", "I'm"], ["\\s+was\\b", "I was"],
+        ["\\s+has\\b", "I have"], ["\\s+had\\b", "I had"], ["\\s+will\\b", "I'll"],
+        ["\\s+does\\b", "I do"], ["\\s+did\\b", "I did"]
+      ];
+      auxMap.forEach(function (pair) {
+        var re = new RegExp("\\b(?:" + nameAlt + ")" + pair[0], "gi");
+        result = result.replace(re, function (m, offset, string) {
+          return capIfSentenceStart(pair[1], offset, string);
+        });
+      });
+
+      var OBJECT_PRECEDERS = /\b(to|with|for|from|about|of|near|alongside|beside|behind|before|after|than|like|upon|unto)\s*$/i;
+      result = result.replace(new RegExp("\\b(?:" + nameAlt + ")\\b", "g"), function (m, offset, string) {
+        var before = string.slice(Math.max(0, offset - 20), offset);
+        var word = OBJECT_PRECEDERS.test(before) ? "me" : "I";
+        return capIfSentenceStart(word, offset, string);
+      });
+    }
+
+    result = result.replace(/\bwe\s+are\b|\bwe're\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("I'm", offset, string);
+    });
+    result = result.replace(/\bwe\s+were\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("I was", offset, string);
+    });
+    result = result.replace(/\b(?:she|he|they)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("I", offset, string);
+    });
+    result = result.replace(/\b(?:him|them|us)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("me", offset, string);
+    });
+    result = result.replace(/\b(?:her|his|their|our)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("my", offset, string);
+    });
+    result = result.replace(/\b(?:hers|theirs|ours)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("mine", offset, string);
+    });
+    result = result.replace(/\b(?:herself|himself|themselves|ourselves)\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("myself", offset, string);
+    });
+    result = result.replace(/\bwe\b/gi, function (m, offset, string) {
+      return capIfSentenceStart("I", offset, string);
+    });
+
+    return result;
+  }
+
   // ---- language templates -------------------------------------------
 
   var MONTHS = {
@@ -154,95 +233,95 @@
 
   var TEMPLATES = {
     english: {
-      subjectFirst: function (name) { return "Meet " + name + " — Our First Update"; },
+      subjectFirst: function (name) { return "Meet " + name + " — My First Update"; },
       subjectMonthly: function (name, month, year) { return name + "'s Update — " + month + " " + year; },
-      introDetailed: function (name, summary, dateStr) {
-        return "This is " + name + "'s very first update with us. " + summary + " " + name + " began this chapter on " + dateStr + ".";
+      introDetailed: function (summary, dateStr) {
+        return "Welcome to my very first update! " + summary + " I began this chapter on " + dateStr + ".";
       },
-      introGeneric: function (name) {
-        return "This is " + name + "'s very first update with us — more will be shared here each month.";
+      introGeneric: function () {
+        return "Welcome to my very first update — more will be shared here each month.";
       },
       prayerLabel: "Prayer request:",
       numbersLabel: "This month in numbers:",
-      ctaLead: "How you can help:",
+      ctaLead: "Here's how you can partner with me:",
       ctaGeneric: "Stay in touch — I'd love to hear from you.",
       ctaEmail: "Simply reply to this email — I'd love to hear from you.",
       ctaWhatsApp: function (phone) { return "Message me on WhatsApp at " + phone + "."; },
       ctaWhatsAppNoPhone: "Message me on WhatsApp.",
-      ctaInstagram: "Follow along on Instagram.",
+      ctaInstagram: "Follow along with me on Instagram.",
       ctaFacebook: "Connect with me on Facebook.",
-      ctaYouTube: "Subscribe on YouTube for more updates.",
-      ctaPrint: "Watch your mailbox for the printed edition.",
-      ctaWebsite: "Visit our website for more.",
+      ctaYouTube: "Subscribe on YouTube for more updates from me.",
+      ctaPrint: "Watch your mailbox — I'll be sending a printed edition too.",
+      ctaWebsite: "Visit my website for more.",
       signoff: "With gratitude,"
     },
     french: {
-      subjectFirst: function (name) { return "À la rencontre de " + name + " — Notre première lettre"; },
+      subjectFirst: function (name) { return "À la rencontre de " + name + " — Ma première lettre"; },
       subjectMonthly: function (name, month, year) { return "Des nouvelles de " + name + " — " + month + " " + year; },
-      introDetailed: function (name, summary, dateStr) {
-        return "Voici la toute première lettre de " + name + ". " + summary + " " + name + " a commencé cette étape le " + dateStr + ".";
+      introDetailed: function (summary, dateStr) {
+        return "Bienvenue dans ma toute première lettre ! " + summary + " J'ai commencé cette étape le " + dateStr + ".";
       },
-      introGeneric: function (name) {
-        return "Voici la toute première lettre de " + name + " — d'autres nouvelles suivront chaque mois.";
+      introGeneric: function () {
+        return "Bienvenue dans ma toute première lettre — d'autres nouvelles suivront chaque mois.";
       },
       prayerLabel: "Sujet de prière :",
       numbersLabel: "Ce mois-ci en chiffres :",
-      ctaLead: "Comment vous pouvez aider :",
-      ctaGeneric: "Restons en contact — j'aimerais avoir de vos nouvelles.",
+      ctaLead: "Voici comment vous pouvez m'accompagner :",
+      ctaGeneric: "J'aimerais rester en contact avec vous.",
       ctaEmail: "Répondez simplement à cet e-mail — j'aimerais avoir de vos nouvelles.",
       ctaWhatsApp: function (phone) { return "Écrivez-moi sur WhatsApp au " + phone + "."; },
       ctaWhatsAppNoPhone: "Écrivez-moi sur WhatsApp.",
       ctaInstagram: "Suivez-moi sur Instagram.",
       ctaFacebook: "Retrouvez-moi sur Facebook.",
-      ctaYouTube: "Abonnez-vous sur YouTube pour plus de nouvelles.",
-      ctaPrint: "La version imprimée arrive bientôt dans votre boîte aux lettres.",
-      ctaWebsite: "Visitez notre site pour en savoir plus.",
+      ctaYouTube: "Abonnez-vous à ma chaîne YouTube pour plus de nouvelles.",
+      ctaPrint: "Je vous enverrai bientôt la version imprimée dans votre boîte aux lettres.",
+      ctaWebsite: "Visitez mon site pour en savoir plus.",
       signoff: "Avec gratitude,"
     },
     spanish: {
-      subjectFirst: function (name) { return "Conoce a " + name + " — Nuestra primera actualización"; },
+      subjectFirst: function (name) { return "Conoce a " + name + " — Mi primera actualización"; },
       subjectMonthly: function (name, month, year) { return "Actualización de " + name + " — " + month + " " + year; },
-      introDetailed: function (name, summary, dateStr) {
-        return "Esta es la primera actualización de " + name + ". " + summary + " " + name + " comenzó esta etapa el " + dateStr + ".";
+      introDetailed: function (summary, dateStr) {
+        return "¡Te doy la bienvenida a mi primera actualización! " + summary + " Comencé esta etapa el " + dateStr + ".";
       },
-      introGeneric: function (name) {
-        return "Esta es la primera actualización de " + name + " — compartiremos más cada mes.";
+      introGeneric: function () {
+        return "Te doy la bienvenida a mi primera actualización — compartiré más cada mes.";
       },
       prayerLabel: "Petición de oración:",
       numbersLabel: "Este mes en números:",
-      ctaLead: "Cómo puedes ayudar:",
-      ctaGeneric: "Mantengámonos en contacto — me encantaría saber de ti.",
+      ctaLead: "Así es como puedes acompañarme:",
+      ctaGeneric: "Me encantaría saber de ti.",
       ctaEmail: "Simplemente responde a este correo — me encantaría saber de ti.",
       ctaWhatsApp: function (phone) { return "Escríbeme por WhatsApp al " + phone + "."; },
       ctaWhatsAppNoPhone: "Escríbeme por WhatsApp.",
       ctaInstagram: "Sígueme en Instagram.",
       ctaFacebook: "Conéctate conmigo en Facebook.",
-      ctaYouTube: "Suscríbete en YouTube para más novedades.",
-      ctaPrint: "Pronto llegará la edición impresa a tu buzón.",
-      ctaWebsite: "Visita nuestro sitio web para más información.",
+      ctaYouTube: "Suscríbete a mi canal de YouTube para más novedades.",
+      ctaPrint: "Pronto te enviaré la edición impresa a tu buzón.",
+      ctaWebsite: "Visita mi sitio web para más información.",
       signoff: "Con gratitud,"
     },
     portuguese: {
-      subjectFirst: function (name) { return "Conheça " + name + " — Nossa primeira atualização"; },
+      subjectFirst: function (name) { return "Conheça " + name + " — Minha primeira atualização"; },
       subjectMonthly: function (name, month, year) { return "Atualização de " + name + " — " + month + " " + year; },
-      introDetailed: function (name, summary, dateStr) {
-        return "Esta é a primeira atualização de " + name + ". " + summary + " " + name + " começou esta etapa em " + dateStr + ".";
+      introDetailed: function (summary, dateStr) {
+        return "Seja bem-vindo à minha primeira atualização! " + summary + " Comecei esta etapa em " + dateStr + ".";
       },
-      introGeneric: function (name) {
-        return "Esta é a primeira atualização de " + name + " — mais novidades a cada mês.";
+      introGeneric: function () {
+        return "Seja bem-vindo à minha primeira atualização — mais novidades a cada mês.";
       },
       prayerLabel: "Pedido de oração:",
       numbersLabel: "Este mês em números:",
-      ctaLead: "Como você pode ajudar:",
-      ctaGeneric: "Vamos manter contato — adoraria ouvir de você.",
+      ctaLead: "Veja como você pode me apoiar:",
+      ctaGeneric: "Adoraria ouvir de você.",
       ctaEmail: "Basta responder a este e-mail — adoraria ouvir de você.",
       ctaWhatsApp: function (phone) { return "Me chame no WhatsApp em " + phone + "."; },
       ctaWhatsAppNoPhone: "Me chame no WhatsApp.",
-      ctaInstagram: "Acompanhe no Instagram.",
+      ctaInstagram: "Acompanhe-me no Instagram.",
       ctaFacebook: "Conecte-se comigo no Facebook.",
-      ctaYouTube: "Inscreva-se no YouTube para mais novidades.",
-      ctaPrint: "Fique de olho na sua caixa de correio para a edição impressa.",
-      ctaWebsite: "Visite nosso site para saber mais.",
+      ctaYouTube: "Inscreva-se no meu canal do YouTube para mais novidades.",
+      ctaPrint: "Fique de olho na sua caixa de correio — enviarei a edição impressa também.",
+      ctaWebsite: "Visite meu site para saber mais.",
       signoff: "Com gratidão,"
     }
   };
@@ -296,24 +375,25 @@
     if (isFirst) {
       var introAllowed = security.allow.intro;
       if (introAllowed) {
-        paragraphs.push(t.introDetailed(name, regFields.MissionSummary.trim(), formatDate(regFields.DepartureDate, lang)));
+        var summaryFirstPerson = toFirstPerson(regFields.MissionSummary.trim(), regFields.FirstName, regFields.LastName);
+        paragraphs.push(t.introDetailed(summaryFirstPerson, formatDate(regFields.DepartureDate, lang)));
       } else {
-        paragraphs.push(t.introGeneric(name));
+        paragraphs.push(t.introGeneric());
       }
     }
 
     if (intakeFields.Highlight.trim()) {
       if (security.allow.highlight) {
-        paragraphs.push(intakeFields.Highlight.trim());
+        paragraphs.push(toFirstPerson(intakeFields.Highlight.trim(), regFields.FirstName, regFields.LastName));
       }
     }
 
     if (intakeFields.PrayerRequest.trim() && security.allow.prayer) {
-      paragraphs.push(t.prayerLabel + " " + intakeFields.PrayerRequest.trim());
+      paragraphs.push(t.prayerLabel + " " + toFirstPerson(intakeFields.PrayerRequest.trim(), regFields.FirstName, regFields.LastName));
     }
 
     if (intakeFields.NumbersUpdate.trim() && security.allow.numbers) {
-      paragraphs.push(t.numbersLabel + " " + intakeFields.NumbersUpdate.trim());
+      paragraphs.push(t.numbersLabel + " " + toFirstPerson(intakeFields.NumbersUpdate.trim(), regFields.FirstName, regFields.LastName));
     }
 
     var ctaLines = buildCtaLines(t, regFields.Channels, security.allow.whatsapp, regFields.WhatsAppPhone.trim());
