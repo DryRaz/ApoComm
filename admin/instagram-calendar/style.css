@@ -13,9 +13,11 @@
   --warn-line: #f0d68a;
   --ok-bg: #eef6ef;
   --ok-line: #bfe0c4;
-  --topic-highlight: #2b5fa8;
+  --topic-highlights: #2b5fa8;
   --topic-prayer: #7a4fa3;
+  --topic-looking_ahead: #b5680d;
   --topic-numbers: #1f8a5f;
+  --topic-meetings: #1f8a5f;
   --radius: 8px;
 }
 
@@ -180,9 +182,11 @@ button:hover { background: var(--accent-dark); }
   color: #fff;
 }
 
-.topic-tag.highlight { background: var(--topic-highlight); }
+.topic-tag.highlights { background: var(--topic-highlights); }
 .topic-tag.prayer { background: var(--topic-prayer); }
+.topic-tag.looking_ahead { background: var(--topic-looking_ahead); }
 .topic-tag.numbers { background: var(--topic-numbers); }
+.topic-tag.meetings { background: var(--topic-meetings); }
 
 .post-card .format-tag { color: var(--muted); }
 

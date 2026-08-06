@@ -7,18 +7,29 @@
   var copyBtn = document.getElementById("copy-btn");
   var copyStatus = document.getElementById("copy-status");
 
-  var REQUIRED_FIELDS = ["ClientID", "IsFirstNewsletter", "Highlight"];
+  var REQUIRED_FIELDS = ["ClientID", "IsFirstNewsletter", "Events"];
+  var LIST_FIELDS = ["Events", "PrayerNeeds", "UpcomingProjects"];
 
   // The order the missionary fills these in; SubmissionDate is
-  // appended as the 8th, system-derived column so a later intake for
+  // appended as the 10th, system-derived column so a later intake for
   // the same ClientID can be told apart from an earlier one.
   var TSV_COLUMNS = [
-    "ClientID", "IsFirstNewsletter", "Highlight", "PrayerRequest",
-    "NumbersUpdate", "NewPhotoLinks", "AnythingToAvoid", "SubmissionDate"
+    "ClientID", "IsFirstNewsletter", "Events", "MeetingsSummary", "PrayerNeeds",
+    "UpcomingProjects", "NumbersUpdate", "NewPhotoLinks", "AnythingToAvoid", "SubmissionDate"
   ];
 
   function sanitize(value) {
     return String(value == null ? "" : value).replace(/[\t\r\n]+/g, " ").trim();
+  }
+
+  // List fields accept either one entry per line or semicolon-separated
+  // entries (the placeholders show both); normalize either style into a
+  // single semicolon-joined TSV cell so the generators only ever have to
+  // split on ";".
+  function sanitizeList(value) {
+    var raw = String(value == null ? "" : value);
+    var items = raw.split(/[\n;]+/).map(function (s) { return s.replace(/\t/g, " ").trim(); }).filter(Boolean);
+    return items.join("; ");
   }
 
   function todayISO() {
@@ -44,13 +55,18 @@
     }
   }
 
+  function fieldValue(name) {
+    var el = form.elements[name];
+    if (!el) return "";
+    return LIST_FIELDS.indexOf(name) !== -1 ? sanitizeList(el.value) : sanitize(el.value);
+  }
+
   function validate() {
     clearErrors();
     var valid = true;
     REQUIRED_FIELDS.forEach(function (name) {
-      var el = form.elements[name];
-      if (!el || !sanitize(el.value)) {
-        setError(name, "This field is required.");
+      if (!fieldValue(name)) {
+        setError(name, LIST_FIELDS.indexOf(name) !== -1 ? "At least one entry is required." : "This field is required.");
         valid = false;
       }
     });
@@ -59,13 +75,15 @@
 
   function buildRow() {
     var values = {
-      ClientID: sanitize(form.elements.ClientID.value),
-      IsFirstNewsletter: sanitize(form.elements.IsFirstNewsletter.value),
-      Highlight: sanitize(form.elements.Highlight.value),
-      PrayerRequest: sanitize(form.elements.PrayerRequest.value),
-      NumbersUpdate: sanitize(form.elements.NumbersUpdate.value),
-      NewPhotoLinks: sanitize(form.elements.NewPhotoLinks.value),
-      AnythingToAvoid: sanitize(form.elements.AnythingToAvoid.value),
+      ClientID: fieldValue("ClientID"),
+      IsFirstNewsletter: fieldValue("IsFirstNewsletter"),
+      Events: fieldValue("Events"),
+      MeetingsSummary: fieldValue("MeetingsSummary"),
+      PrayerNeeds: fieldValue("PrayerNeeds"),
+      UpcomingProjects: fieldValue("UpcomingProjects"),
+      NumbersUpdate: fieldValue("NumbersUpdate"),
+      NewPhotoLinks: fieldValue("NewPhotoLinks"),
+      AnythingToAvoid: fieldValue("AnythingToAvoid"),
       SubmissionDate: todayISO()
     };
     return TSV_COLUMNS.map(function (col) { return values[col] || ""; }).join("\t");

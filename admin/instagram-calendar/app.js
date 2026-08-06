@@ -14,9 +14,15 @@
   ];
 
   var INTAKE_COLUMNS = [
-    "ClientID", "IsFirstNewsletter", "Highlight", "PrayerRequest",
-    "NumbersUpdate", "NewPhotoLinks", "AnythingToAvoid", "SubmissionDate"
+    "ClientID", "IsFirstNewsletter", "Events", "MeetingsSummary", "PrayerNeeds",
+    "UpcomingProjects", "NumbersUpdate", "NewPhotoLinks", "AnythingToAvoid", "SubmissionDate"
   ];
+
+  // Events/PrayerNeeds/UpcomingProjects are semicolon-joined lists (see
+  // newsletter-intake); any number of entries, including zero.
+  function splitList(raw) {
+    return raw.split(/;+/).map(function (s) { return s.trim(); }).filter(Boolean);
+  }
 
   var regInput = document.getElementById("reg-input");
   var intakeInput = document.getElementById("intake-input");
@@ -80,8 +86,9 @@
   }
 
   var TOPICS = {
-    highlight: ["highlight"],
+    highlights: ["highlight", "event", "events"],
     prayer: ["prayer"],
+    looking_ahead: ["upcoming", "project", "looking ahead"],
     numbers: ["numbers", "stats", "progress"]
   };
 
@@ -90,7 +97,7 @@
     var instructions = regFields.SecurityInstructions.trim();
 
     if (!sensitive) {
-      return { blocked: false, sensitive: false, allow: { highlight: true, prayer: true, numbers: true } };
+      return { blocked: false, sensitive: false, allow: { highlights: true, prayer: true, looking_ahead: true, numbers: true } };
     }
 
     if (!instructions) {
@@ -232,18 +239,31 @@
     engagement: "Engagement / Question"
   };
 
-  var TOPIC_META = { highlight: "Highlight", prayer: "Prayer Request", numbers: "Numbers Update" };
+  // Categories in the monthly topic pool. `meetings` (MeetingsSummary) is
+  // its own pool entry per the spec, but reuses the `numbers` caption
+  // templates/format preference — both are single rollup stats rather
+  // than itemized lists, so a dedicated template set would be redundant.
+  var CATEGORY_LABEL = {
+    highlights: "Event",
+    prayer: "Prayer Need",
+    looking_ahead: "Upcoming Project",
+    numbers: "Numbers Update",
+    meetings: "Meetings Summary"
+  };
 
-  // Format→topic compatibility and per-topic preference order used when
-  // filling the schedule. prayer_focused is the one hard exclusivity rule
-  // from the spec ("only ever pulls from PrayerRequest"); every other
-  // format is open to any topic, with a preference order that leads with
-  // the "sensible" fit called out in the spec (BTS/POV/viral/educational
-  // for Highlight, quote/stat for Numbers) before falling back to the rest.
+  // Format→topic compatibility and per-category preference order used
+  // when filling the schedule. prayer_focused is the one hard exclusivity
+  // rule from the spec ("only ever pulls from PrayerRequest"); every
+  // other format is open to any category, with a preference order that
+  // leads with the "sensible" fit called out in the spec (BTS/POV/viral/
+  // educational for events, quote/stat for numbers) before falling back
+  // to the rest.
   var FORMAT_PREFERENCE = {
-    highlight: ["bts", "pov", "viral", "educational", "quote_stat", "engagement"],
+    highlights: ["bts", "pov", "viral", "educational", "quote_stat", "engagement"],
     numbers: ["quote_stat", "viral", "educational", "engagement", "bts", "pov"],
-    prayer: ["prayer_focused", "engagement", "bts", "pov", "viral", "educational", "quote_stat"]
+    meetings: ["quote_stat", "educational", "engagement", "viral", "bts", "pov"],
+    prayer: ["prayer_focused", "engagement", "bts", "pov", "viral", "educational", "quote_stat"],
+    looking_ahead: ["educational", "engagement", "viral", "pov", "bts", "quote_stat"]
   };
 
   // Graphic direction is keyed by format only (not topic/language) — it's
@@ -266,13 +286,21 @@
   // exactly what the missionary wrote.
   var TEMPLATES = {
     english: {
-      highlight: {
+      highlights: {
         viral: function (s) { return "Okay, I have to tell you about this one. " + s + " I'm still smiling about it, and I wanted you to be among the first to know."; },
         educational: function (s) { return "Something I don't always explain well in these updates: " + s + " Moments like this are actually a normal part of what ministry here looks like day to day — less about grand plans, more about showing up consistently and staying ready."; },
         pov: function (s) { return "Picture this with me for a second: " + s + " Now imagine standing right next to me in that exact moment — that's genuinely what it felt like, and I wanted to bring you into it instead of just reporting it after the fact."; },
         quote_stat: function (s) { return s; },
         bts: function (s) { return "Here's the part you don't usually see: " + s + " There was a lot of ordinary, unglamorous prep behind that moment — the setup, the small logistics, the waiting — and I think that's just as worth sharing as the highlight itself."; },
         engagement: function (s) { return s + " I'd love to know — has something small like this ever ended up mattering way more than you expected? Tell me in the comments."; }
+      },
+      looking_ahead: {
+        educational: function (s) { return "Something I don't always slow down to explain: " + s + " I like giving you a heads-up on what's ahead, not just a recap of what's already happened, since it means you can actually be part of it as it unfolds instead of only hearing about it afterward."; },
+        engagement: function (s) { return s + " I'd love to know — is there something you're looking forward to right now too? Tell me in the comments."; },
+        viral: function (s) { return "Okay, I have to tell you what's coming up. " + s + " I'm genuinely excited (and a little nervous) about this one, and I wanted you to know before it happens, not just after."; },
+        pov: function (s) { return "Picture this with me for a second: " + s + " I don't know exactly how it'll go yet, but I wanted to bring you into the anticipation of it with me instead of only telling you the outcome later."; },
+        bts: function (s) { return "Here's something most people don't see yet: " + s + " Right now it's still mostly planning, logistics, and a lot of small decisions behind the scenes — nothing photogenic yet, but it's real work."; },
+        quote_stat: function (s) { return s; }
       },
       numbers: {
         viral: function (s) { return "A number I wasn't expecting to share yet: " + s + " It's a small milestone, but it's a real one, and I wanted you to see it before it just becomes a line in a spreadsheet."; },
@@ -328,59 +356,146 @@
     }
   };
 
-  function getCaption(lang, topic, format, seed) {
-    if (lang === "english") return TEMPLATES.english[topic][format](seed);
+  function getCaption(lang, category, format, seed) {
+    // `meetings` reuses the `numbers` English template set (see
+    // CATEGORY_LABEL comment); the generic FR/ES/PT templates are
+    // format-keyed only, so no mapping is needed for those.
+    if (lang === "english") {
+      var templateCategory = category === "meetings" ? "numbers" : category;
+      return TEMPLATES.english[templateCategory][format](seed);
+    }
     return GENERIC_TEMPLATES[lang][format](seed);
   }
 
   var HASHTAG_BANK = {
-    highlight: ["#MissionaryLife", "#FaithInAction", "#Testimony", "#ThisIsMinistry", "#GodAtWork"],
+    highlights: ["#MissionaryLife", "#FaithInAction", "#Testimony", "#ThisIsMinistry", "#GodAtWork"],
     prayer: ["#PrayForMe", "#PrayerRequest", "#StandWithMe", "#Intercession"],
+    looking_ahead: ["#ComingSoon", "#LookingAhead", "#NextChapter", "#Anticipation"],
     numbers: ["#Milestone", "#Progress", "#Grateful", "#KingdomWork"],
     universal: ["#MissionaryLife", "#SupportMissions", "#PartnerInMinistry"]
   };
 
-  function buildHashtags(topic) {
-    var tags = HASHTAG_BANK[topic].slice(0, 3);
+  function buildHashtags(category) {
+    var bankCategory = category === "meetings" ? "numbers" : category;
+    var tags = HASHTAG_BANK[bankCategory].slice(0, 3);
     HASHTAG_BANK.universal.forEach(function (t) {
       if (tags.indexOf(t) === -1 && tags.length < 5) tags.push(t);
     });
     return tags.slice(0, 5);
   }
 
-  // ---- scheduling ---------------------------------------------------
+  // ---- language purity check (defensive) -------------------------------
+
+  // PrimaryLanguage, parsed directly from the pasted registration row, is
+  // the sole source of truth for output language (see detectLanguage()) —
+  // there is no other input this tool reads that could influence it. This
+  // check is an extra guard specifically on the template-authored framing
+  // text (the part this tool actually writes): the missionary's own seed
+  // sentence is excluded, since flagging their own words as a "language
+  // bug" would be wrong — they're free to write their intake answers in
+  // whatever language they actually used.
+  var NON_ENGLISH_CHARS_RE = /[àâäéèêëîïôöùûüÿçœæñãõ¿¡]/i;
+  var ENGLISH_TELLTALES = [" the ", " and ", " you ", " your ", "i'm ", "i am ", "would you", "let me know", "tell me"];
+
+  function checkLanguagePurity(caption, seed, lang) {
+    var framingOnly = seed ? caption.split(seed).join(" ") : caption;
+    if (lang === "english") {
+      if (NON_ENGLISH_CHARS_RE.test(framingOnly)) {
+        throw new Error(
+          "Language check failed: PrimaryLanguage is English but the generated caption framing contains non-English characters."
+        );
+      }
+    } else {
+      var lower = " " + framingOnly.toLowerCase() + " ";
+      var hit = ENGLISH_TELLTALES.filter(function (t) { return lower.indexOf(t) !== -1; });
+      if (hit.length) {
+        throw new Error(
+          "Language check failed: PrimaryLanguage is " + lang + " but the generated caption framing contains English (\"" + hit[0].trim() + "\")."
+        );
+      }
+    }
+  }
+
+  // ---- pool & scheduling ------------------------------------------------
 
   var TARGET_POSTS = 16; // 4 weeks x 4 posts/week
 
-  // Round-robins through the available topics (in a fixed, spread-
-  // friendly order), assigning each occurrence the next format in that
-  // topic's preference list. A topic is skipped once its own preference
-  // list is exhausted, which is exactly what guarantees no topic+format
-  // pair ever repeats. If every available topic's list runs dry before
-  // 16 slots are filled, the schedule simply stops short — callers see
-  // that via `target < TARGET_POSTS` and flag it instead of padding.
-  function buildSchedule(topicSeeds) {
-    var order = ["highlight", "numbers", "prayer"].filter(function (k) { return topicSeeds[k]; });
-    var lists = {};
-    order.forEach(function (k) { lists[k] = FORMAT_PREFERENCE[k]; });
-    var counts = {}; order.forEach(function (k) { counts[k] = 0; });
-    var totalCapacity = order.reduce(function (sum, k) { return sum + lists[k].length; }, 0);
-    var target = Math.min(TARGET_POSTS, totalCapacity);
-
-    var schedule = [];
-    var i = 0;
-    var guard = 0;
-    while (schedule.length < target && guard < 1000) {
-      guard++;
-      var topic = order[i % order.length];
-      i++;
-      if (counts[topic] < lists[topic].length) {
-        schedule.push({ topic: topic, format: lists[topic][counts[topic]] });
-        counts[topic]++;
-      }
+  // The monthly topic pool: every individual Event, every individual
+  // PrayerNeed, every individual UpcomingProject, plus NumbersUpdate and
+  // MeetingsSummary as single rollup entries. MeetingsSummary is gated
+  // under the same `highlights` allow-flag as Events, consistent with the
+  // newsletter treating it as part of the Highlights topic.
+  function buildItemsByCategory(regFields, intakeFields, security) {
+    function toItems(rawList, allowed) {
+      if (!allowed) return [];
+      return splitList(rawList).map(function (raw) {
+        return toFirstPerson(raw, regFields.FirstName, regFields.LastName);
+      });
     }
+    var byCat = {};
+    byCat.highlights = toItems(intakeFields.Events, security.allow.highlights);
+    byCat.prayer = toItems(intakeFields.PrayerNeeds, security.allow.prayer);
+    byCat.looking_ahead = toItems(intakeFields.UpcomingProjects, security.allow.looking_ahead);
+    byCat.numbers = (security.allow.numbers && intakeFields.NumbersUpdate.trim())
+      ? [toFirstPerson(intakeFields.NumbersUpdate.trim(), regFields.FirstName, regFields.LastName)] : [];
+    byCat.meetings = (security.allow.highlights && intakeFields.MeetingsSummary.trim())
+      ? [toFirstPerson(intakeFields.MeetingsSummary.trim(), regFields.FirstName, regFields.LastName)] : [];
+    return byCat;
+  }
 
-    return { schedule: schedule, target: target, totalCapacity: totalCapacity };
+  function rotateList(list, n) {
+    var k = n % list.length;
+    return list.slice(k).concat(list.slice(0, k));
+  }
+
+  // Interleaves categories round-robin (rather than all Events, then all
+  // PrayerNeeds, ...) so that even the earliest slice of the pool already
+  // mixes topics — this is what gives a richer month natural variety
+  // across weeks instead of clustering one category together. Each
+  // item's preference list is also rotated by its own index within the
+  // category: without this, every item in a multi-item category would
+  // share the same #1 format (e.g. all four Events opening with the
+  // identical "Behind-the-Scenes" framing text in wave 0) — technically
+  // non-repeating pairs, but visibly templated. Rotating means four
+  // Events instead open with four different formats in wave 0.
+  function buildPool(byCat) {
+    var order = ["highlights", "prayer", "looking_ahead", "numbers", "meetings"].filter(function (c) { return byCat[c].length > 0; });
+    var maxLen = order.reduce(function (m, c) { return Math.max(m, byCat[c].length); }, 0);
+    var pool = [];
+    for (var i = 0; i < maxLen; i++) {
+      order.forEach(function (cat) {
+        if (i < byCat[cat].length) {
+          var isList = byCat[cat].length > 1;
+          pool.push({
+            category: cat,
+            label: CATEGORY_LABEL[cat] + (isList ? " " + (i + 1) : ""),
+            seed: byCat[cat][i],
+            prefList: rotateList(FORMAT_PREFERENCE[cat], i)
+          });
+        }
+      });
+    }
+    return pool;
+  }
+
+  // Draws from the real pool before recycling any item onto a second
+  // angle: wave 0 gives every distinct pool item its single best-fit
+  // format (maximum topic variety first), wave 1 gives every item that
+  // still has an unused format a second angle, and so on. A richer month
+  // (more real items) fills more of the calendar from wave 0 alone —
+  // exactly "more variety, not more repetition." If every item's
+  // preference list is exhausted before 16 slots are filled, the
+  // schedule simply stops short; callers see that via `target <
+  // TARGET_POSTS` and flag it instead of padding or repeating a pair.
+  function buildWaves(pool) {
+    var maxPref = pool.reduce(function (m, p) { return Math.max(m, p.prefList.length); }, 0);
+    var waves = [];
+    for (var w = 0; w < maxPref; w++) {
+      pool.forEach(function (item) {
+        if (w < item.prefList.length) waves.push({ item: item, format: item.prefList[w] });
+      });
+    }
+    return waves;
   }
 
   // ---- assembly -------------------------------------------------------
@@ -388,46 +503,42 @@
   function buildCalendar(regFields, intakeFields, security) {
     var lang = detectLanguage(regFields.PrimaryLanguage);
 
-    var topicSeeds = {};
-    if (intakeFields.Highlight.trim() && security.allow.highlight) {
-      topicSeeds.highlight = toFirstPerson(intakeFields.Highlight.trim(), regFields.FirstName, regFields.LastName);
-    }
-    if (intakeFields.PrayerRequest.trim() && security.allow.prayer) {
-      topicSeeds.prayer = toFirstPerson(intakeFields.PrayerRequest.trim(), regFields.FirstName, regFields.LastName);
-    }
-    if (intakeFields.NumbersUpdate.trim() && security.allow.numbers) {
-      topicSeeds.numbers = toFirstPerson(intakeFields.NumbersUpdate.trim(), regFields.FirstName, regFields.LastName);
-    }
+    var byCat = buildItemsByCategory(regFields, intakeFields, security);
+    var pool = buildPool(byCat);
+    var waves = buildWaves(pool);
+    var target = Math.min(TARGET_POSTS, waves.length);
+    var scheduled = waves.slice(0, target);
 
-    var built = buildSchedule(topicSeeds);
-    var pairsUsed = {}; // topic -> [formats]
+    var pairsUsed = {}; // category -> [formats]
 
-    var posts = built.schedule.map(function (slot, idx) {
-      var caption = getCaption(lang, slot.topic, slot.format, topicSeeds[slot.topic]);
+    var posts = scheduled.map(function (entry, idx) {
+      var caption = getCaption(lang, entry.item.category, entry.format, entry.item.seed);
+      checkLanguagePurity(caption, entry.item.seed, lang);
       var avoided = applyAvoidList(caption, intakeFields.AnythingToAvoid);
-      pairsUsed[slot.topic] = pairsUsed[slot.topic] || [];
-      pairsUsed[slot.topic].push(slot.format);
+      pairsUsed[entry.item.category] = pairsUsed[entry.item.category] || [];
+      pairsUsed[entry.item.category].push(entry.format);
       return {
         index: idx,
         week: Math.floor(idx / 4) + 1,
         slot: (idx % 4) + 1,
-        topic: slot.topic,
-        format: slot.format,
+        category: entry.item.category,
+        label: entry.item.label,
+        format: entry.format,
         caption: avoided.text,
         avoidedTerms: avoided.applied.filter(function (a) { return a.found; }),
-        hashtags: buildHashtags(slot.topic),
-        graphic: GRAPHIC_NOTES[slot.format]
+        hashtags: buildHashtags(entry.item.category),
+        graphic: GRAPHIC_NOTES[entry.format]
       };
     });
 
-    var exhausted = built.target < TARGET_POSTS;
+    var exhausted = target < TARGET_POSTS;
 
     return {
       posts: posts,
-      target: built.target,
-      totalCapacity: built.totalCapacity,
+      target: target,
+      totalCapacity: waves.length,
+      poolSize: pool.length,
       exhausted: exhausted,
-      topicSeeds: topicSeeds,
       pairsUsed: pairsUsed
     };
   }
@@ -447,7 +558,7 @@
       weeks[weekNum].forEach(function (p) {
         html +=
           '<div class="post-card">' +
-          '<div class="meta"><span class="topic-tag ' + p.topic + '">' + escapeHtml(TOPIC_META[p.topic]) + "</span>" +
+          '<div class="meta"><span class="topic-tag ' + p.category + '">' + escapeHtml(p.label) + "</span>" +
           '<span class="format-tag">' + escapeHtml(FORMAT_META[p.format]) + "</span></div>" +
           '<div class="caption">' + escapeHtml(p.caption) + "</div>" +
           '<div class="hashtags">' + escapeHtml(p.hashtags.join(" ")) + "</div>" +
@@ -478,7 +589,7 @@
       lines.push("=== WEEK " + weekNum + " ===");
       weeks[weekNum].forEach(function (p) {
         lines.push(
-          "Day " + p.slot + " — Topic: " + TOPIC_META[p.topic] + " | Format: " + FORMAT_META[p.format]
+          "Day " + p.slot + " — Topic: " + p.label + " | Format: " + FORMAT_META[p.format]
         );
         lines.push(p.caption);
         lines.push(p.hashtags.join(" "));
@@ -507,9 +618,10 @@
       });
     }
     lines.push('<div class="row"><strong>Posts generated:</strong> ' + calendar.target + " / " + TARGET_POSTS + "</div>");
-    Object.keys(calendar.pairsUsed).forEach(function (topic) {
-      lines.push('<div class="row"><strong>' + TOPIC_META[topic] + " formats used:</strong> " +
-        calendar.pairsUsed[topic].map(function (f) { return FORMAT_META[f]; }).join(", ") + "</div>");
+    lines.push('<div class="row"><strong>Real items in pool this month:</strong> ' + calendar.poolSize + "</div>");
+    Object.keys(calendar.pairsUsed).forEach(function (category) {
+      lines.push('<div class="row"><strong>' + CATEGORY_LABEL[category] + " formats used:</strong> " +
+        calendar.pairsUsed[category].map(function (f) { return FORMAT_META[f]; }).join(", ") + "</div>");
     });
     var avoidTerms = [];
     calendar.posts.forEach(function (p) { avoidTerms = avoidTerms.concat(p.avoidedTerms); });
@@ -561,7 +673,13 @@
       return;
     }
 
-    var calendar = buildCalendar(regFields, intakeFields, security);
+    var calendar;
+    try {
+      calendar = buildCalendar(regFields, intakeFields, security);
+    } catch (err) {
+      parseError.textContent = err.message;
+      return;
+    }
 
     showDecision(security, calendar);
 
