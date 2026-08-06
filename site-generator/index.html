@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apostello Comm — Missionary Site Generator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <header class="page-header">
+    <h1>Missionary site generator</h1>
+    <p class="subtitle">Paste one 36-column TSV row (same format the registration app produces) to generate a single-page site.</p>
+  </header>
+
+  <div class="field">
+    <label for="tsv-input">TSV row</label>
+    <textarea id="tsv-input" rows="6" spellcheck="false" placeholder="APC-2026-001&#9;New&#9;2026-08-06&#9;..."></textarea>
+    <p class="error" id="parse-error"></p>
+  </div>
+
+  <div class="form-actions">
+    <button type="button" id="generate-btn">Generate site</button>
+  </div>
+
+  <div id="blocked-message" class="blocked-banner" hidden></div>
+
+  <div id="security-decision" class="security-decision" hidden></div>
+
+  <section id="success-panel" class="success-panel" hidden>
+    <h2>Preview</h2>
+    <iframe id="preview" title="Generated site preview"></iframe>
+
+    <div class="field">
+      <label for="html-output">Generated HTML (single self-contained file)</label>
+      <textarea id="html-output" readonly rows="10"></textarea>
+    </div>
+
+    <div class="output-actions">
+      <button type="button" id="copy-html-btn">Copy HTML</button>
+      <button type="button" id="download-btn">Download .html file</button>
+      <span id="action-status" class="action-status" aria-live="polite"></span>
+    </div>
+  </section>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
