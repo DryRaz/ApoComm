@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apostello Comm — Instagram Content Calendar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <header class="page-header">
+    <h1>Instagram content calendar generator</h1>
+    <p class="subtitle">Paste the missionary's 36-column registration row and this month's 8-column intake row (same intake used for the newsletter) to draft a 4-week / ~16-post Instagram calendar.</p>
+  </header>
+
+  <div class="field">
+    <label for="reg-input">Registration TSV row (36 columns)</label>
+    <textarea id="reg-input" rows="4" spellcheck="false" placeholder="APC-2026-001&#9;New&#9;2026-08-06&#9;..."></textarea>
+  </div>
+
+  <div class="field">
+    <label for="intake-input">Monthly intake TSV row (10 columns)</label>
+    <textarea id="intake-input" rows="3" spellcheck="false" placeholder="APC-2026-001&#9;Yes&#9;..."></textarea>
+  </div>
+
+  <p class="error" id="parse-error"></p>
+
+  <div class="form-actions">
+    <button type="button" id="generate-btn">Generate calendar</button>
+  </div>
+
+  <div id="mismatch-warning" class="mismatch-warning" hidden></div>
+
+  <div id="blocked-message" class="blocked-banner" hidden></div>
+
+  <div id="security-decision" class="security-decision" hidden></div>
+
+  <section id="success-panel" class="success-panel" hidden>
+    <h2>4-week calendar — ready to paste into a content planner</h2>
+
+    <div id="calendar-view" class="calendar-view"></div>
+
+    <div class="field">
+      <label for="calendar-output">Plain-text version (for copy/paste)</label>
+      <textarea id="calendar-output" readonly rows="16"></textarea>
+    </div>
+
+    <div class="output-actions">
+      <button type="button" id="copy-btn">Copy plain text</button>
+      <span id="action-status" class="action-status" aria-live="polite"></span>
+    </div>
+  </section>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

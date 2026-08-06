@@ -10,7 +10,7 @@
 <div class="page">
   <header class="page-header">
     <h1>Monthly newsletter intake</h1>
-    <p class="subtitle">A quick check-in each month to feed your newsletter. Takes two minutes.</p>
+    <p class="subtitle">A quick check-in each month to feed your newsletter and social content. Add as much or as little as actually happened — there's no fixed number of entries.</p>
   </header>
 
   <form id="intake-form" novalidate>
@@ -32,16 +32,29 @@
     </div>
 
     <div class="field">
-      <label for="Highlight">This month's highlight <span class="req">*</span></label>
-      <textarea id="Highlight" name="Highlight" rows="4" required
-        placeholder="The best or most meaningful thing that happened this month."></textarea>
-      <p class="error" data-error-for="Highlight"></p>
+      <label for="Events">Events / notable moments this month <span class="req">*</span></label>
+      <textarea id="Events" name="Events" rows="4"
+        placeholder="One per line or separated by semicolons — as many as actually happened. e.g. Hosted our first youth night, 40 teens showed up; Baptized 6 new believers; Started a Bible study in a new neighborhood"></textarea>
+      <p class="hint">Separate multiple events with a semicolon (;). At least one is required.</p>
+      <p class="error" data-error-for="Events"></p>
     </div>
 
     <div class="field">
-      <label for="PrayerRequest">Prayer request</label>
-      <textarea id="PrayerRequest" name="PrayerRequest" rows="3"
-        placeholder="Optional — a challenge or need to share."></textarea>
+      <label for="MeetingsSummary">Meetings / activity rollup</label>
+      <textarea id="MeetingsSummary" name="MeetingsSummary" rows="2"
+        placeholder="Optional — a general rollup, not itemized. e.g. Led about 20 discipleship meetings this month."></textarea>
+    </div>
+
+    <div class="field">
+      <label for="PrayerNeeds">Prayer needs</label>
+      <textarea id="PrayerNeeds" name="PrayerNeeds" rows="3"
+        placeholder="Optional — separate multiple needs with a semicolon (;). e.g. Wisdom as I build my core leadership team; Health for my youngest, who's been sick"></textarea>
+    </div>
+
+    <div class="field">
+      <label for="UpcomingProjects">Upcoming projects</label>
+      <textarea id="UpcomingProjects" name="UpcomingProjects" rows="3"
+        placeholder="Optional — separate multiple items with a semicolon (;). e.g. Launching a second youth night location; Planning a baptism service next month"></textarea>
     </div>
 
     <div class="field">
@@ -70,7 +83,7 @@
   <section id="result" class="result" hidden>
     <h2>Captured</h2>
     <div class="field">
-      <label for="tsv-output">TSV row — paste this into the newsletter generator (8 columns)</label>
+      <label for="tsv-output">TSV row — paste this into the newsletter and Instagram calendar generators (10 columns)</label>
       <textarea id="tsv-output" readonly rows="3"></textarea>
       <button type="button" id="copy-btn">Copy to clipboard</button>
       <span id="copy-status" class="copy-status" aria-live="polite"></span>
