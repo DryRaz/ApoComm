@@ -120,6 +120,22 @@ button:hover { background: var(--accent-dark); }
   background: #fff;
 }
 
+.save-path-instruction {
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-line);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+}
+
+.save-path-instruction code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
 #html-output {
   height: 220px;
   font-size: 0.78rem;
