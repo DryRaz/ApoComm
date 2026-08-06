@@ -21,12 +21,13 @@
   var successPanel = document.getElementById("success-panel");
   var preview = document.getElementById("preview");
   var htmlOutput = document.getElementById("html-output");
+  var saveInstruction = document.getElementById("save-path-instruction");
   var copyHtmlBtn = document.getElementById("copy-html-btn");
   var downloadBtn = document.getElementById("download-btn");
   var actionStatus = document.getElementById("action-status");
 
   var currentHtml = "";
-  var currentFileName = "missionary-site.html";
+  var currentFileName = "index.html";
 
   function parseRow(raw) {
     var lines = raw.split(/\r?\n/);
@@ -340,6 +341,7 @@
     blockedMessage.hidden = true;
     securityDecision.hidden = true;
     successPanel.hidden = true;
+    saveInstruction.innerHTML = "";
     actionStatus.textContent = "";
   }
 
@@ -365,7 +367,10 @@
     showDecision(security);
 
     currentHtml = buildSiteHtml(fields, security);
-    currentFileName = slug(fields.FirstName + "-" + fields.LastName) + "-site.html";
+    currentFileName = "index.html";
+
+    var savePath = "/sites/" + (fields.ClientID || slug(fields.FirstName + "-" + fields.LastName)) + "/index.html";
+    saveInstruction.innerHTML = "Save this file as <code>" + escapeHtml(savePath) + "</code> in the repository.";
 
     htmlOutput.value = currentHtml;
     preview.srcdoc = currentHtml;
