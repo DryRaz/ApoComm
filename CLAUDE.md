@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-The repository holds two independent static tools for Apostello Comm, plus this documentation. No build system, package manifest, or test suite anywhere — plain HTML/CSS/JS with zero dependencies throughout.
+The repository holds four independent static tools for Apostello Comm, plus this documentation. No build system, package manifest, or test suite anywhere — plain HTML/CSS/JS with zero dependencies throughout.
 
 Run either tool locally with any static file server, e.g. `python3 -m http.server 8000` from the repo root, then open the relevant path below. There is no build or lint step. There is no automated test suite; verify changes by exercising the tool in a browser (or headless via Playwright, already available in this environment).
 
@@ -34,6 +34,24 @@ Takes one pasted 36-column TSV row (the same format the registration form produc
 - The photo section is three placeholder `.photo-slot` divs, each preceded by an HTML comment (`<!-- PHOTO n: replace... -->`) marking where to paste a real `<img>` later.
 - `SITE_CSS` is inlined into the generated page's `<style>` tag so the output is a single portable file with no external requests (no font/CDN loads).
 - The generator UI shows a `security-decision` summary (SecuritySensitive value, and whether country/city will be shown) so a human can audit the gate's decision before trusting or publishing the output.
+
+### Monthly newsletter intake (`newsletter-intake/index.html`, `newsletter-intake/style.css`, `newsletter-intake/app.js`)
+
+Short recurring form a missionary fills out each month; outputs an 8-column TSV row meant to be pasted into the newsletter generator alongside their registration row.
+
+- Required fields are just `ClientID`, `IsFirstNewsletter`, `Highlight` — everything else (`PrayerRequest`, `NumbersUpdate`, `NewPhotoLinks`, `AnythingToAvoid`) is optional, same `validate()`/inline-error pattern as the registration form.
+- `SubmissionDate` (today's date) is appended as an 8th, system-derived column so the newsletter generator — and a human skimming a pile of pasted rows — can tell which month an intake belongs to when the same `ClientID` submits repeatedly.
+
+### Newsletter generator (`newsletter-generator/index.html`, `newsletter-generator/style.css`, `newsletter-generator/app.js`)
+
+Takes one 36-column registration row and one 8-column intake row, and drafts a plain-text subject + body for that month's newsletter, ready to paste into Mailchimp's Campaign Builder.
+
+- Reuses the registration form's security gate (`evaluateSecurityGate()`): `SecuritySensitive = YES` with empty `SecurityInstructions` blocks generation outright, same message as the site generator.
+- Extends the site generator's clause-scanning allow-list (`isTopicAllowed()`, generalized from `isLocationFieldAllowed()`) beyond `country`/`city` to five topics: `intro` (the `MissionSummary`/`DepartureDate` used in a first newsletter), `highlight`, `prayer`, `numbers`, and `whatsapp` (the phone number offered as a WhatsApp contact channel). Each is included only if a `SecurityInstructions` clause explicitly permits it; otherwise it's omitted (`highlight`/`prayer`/`numbers`) or swapped for a fixed, non-specific template line (`intro`, `whatsapp`) rather than attempting any automated rewriting of the missionary's own words.
+- `applyAvoidList()` is a second, independent redaction pass that always runs, regardless of `SecuritySensitive`: it splits the intake's `AnythingToAvoid` into clauses and case-insensitively strips any that appear verbatim in the assembled subject/body. This is a literal-substring safety net, not an NLP filter — it catches the common case (a missionary names an exact word/phrase to avoid) but won't catch a paraphrase of it.
+- Content and template chrome (labels, intro/CTA phrasing, sign-off) are localized to `PrimaryLanguage` via a small `TEMPLATES` dictionary (English/French/Spanish/Portuguese, detected by `detectLanguage()`, defaulting to English). The missionary's own free text (`MissionSummary`, `Highlight`, etc.) is never machine-translated — only the surrounding scaffolding changes language.
+- If the registration and intake rows carry different `ClientID`s, a non-blocking `mismatch-warning` banner fires — this doesn't block generation (unlike the security gate) since a human is expected to read and correct it before sending.
+- The `security-decision` panel lists, per topic, whether it was included or omitted, plus which `AnythingToAvoid` terms were found and stripped — the same audit-before-publish pattern as the site generator.
 
 ## Domain context
 

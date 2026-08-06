@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apostello Comm — Monthly Newsletter Intake</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <header class="page-header">
+    <h1>Monthly newsletter intake</h1>
+    <p class="subtitle">A quick check-in each month to feed your newsletter. Takes two minutes.</p>
+  </header>
+
+  <form id="intake-form" novalidate>
+    <div class="field">
+      <label for="ClientID">Your Client ID <span class="req">*</span></label>
+      <input type="text" id="ClientID" name="ClientID" placeholder="e.g. APC-2026-001" required>
+      <p class="hint">Find this on your registration confirmation.</p>
+      <p class="error" data-error-for="ClientID"></p>
+    </div>
+
+    <div class="field">
+      <label for="IsFirstNewsletter">Is this your first newsletter? <span class="req">*</span></label>
+      <select id="IsFirstNewsletter" name="IsFirstNewsletter" required>
+        <option value="" disabled selected>Select an answer</option>
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+      </select>
+      <p class="error" data-error-for="IsFirstNewsletter"></p>
+    </div>
+
+    <div class="field">
+      <label for="Highlight">This month's highlight <span class="req">*</span></label>
+      <textarea id="Highlight" name="Highlight" rows="4" required
+        placeholder="The best or most meaningful thing that happened this month."></textarea>
+      <p class="error" data-error-for="Highlight"></p>
+    </div>
+
+    <div class="field">
+      <label for="PrayerRequest">Prayer request</label>
+      <textarea id="PrayerRequest" name="PrayerRequest" rows="3"
+        placeholder="Optional — a challenge or need to share."></textarea>
+    </div>
+
+    <div class="field">
+      <label for="NumbersUpdate">Numbers update</label>
+      <textarea id="NumbersUpdate" name="NumbersUpdate" rows="2"
+        placeholder="Optional — e.g. new partners, progress toward your objective."></textarea>
+    </div>
+
+    <div class="field">
+      <label for="NewPhotoLinks">New photo links</label>
+      <input type="text" id="NewPhotoLinks" name="NewPhotoLinks" placeholder="Optional — links to photos for this issue.">
+    </div>
+
+    <div class="field">
+      <label for="AnythingToAvoid">Anything to avoid mentioning this month?</label>
+      <textarea id="AnythingToAvoid" name="AnythingToAvoid" rows="2"
+        placeholder="Optional — anything you do NOT want mentioned this month."></textarea>
+      <p class="hint">This is on top of your standing security instructions, not instead of them.</p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit">Submit this month's update</button>
+    </div>
+  </form>
+
+  <section id="result" class="result" hidden>
+    <h2>Captured</h2>
+    <div class="field">
+      <label for="tsv-output">TSV row — paste this into the newsletter generator (8 columns)</label>
+      <textarea id="tsv-output" readonly rows="3"></textarea>
+      <button type="button" id="copy-btn">Copy to clipboard</button>
+      <span id="copy-status" class="copy-status" aria-live="polite"></span>
+    </div>
+  </section>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apostello Comm — Newsletter Generator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <header class="page-header">
+    <h1>Monthly newsletter generator</h1>
+    <p class="subtitle">Paste the missionary's 36-column registration row and this month's 8-column intake row to draft the newsletter.</p>
+  </header>
+
+  <div class="field">
+    <label for="reg-input">Registration TSV row (36 columns)</label>
+    <textarea id="reg-input" rows="4" spellcheck="false" placeholder="APC-2026-001&#9;New&#9;2026-08-06&#9;..."></textarea>
+  </div>
+
+  <div class="field">
+    <label for="intake-input">Monthly intake TSV row (8 columns)</label>
+    <textarea id="intake-input" rows="3" spellcheck="false" placeholder="APC-2026-001&#9;Yes&#9;..."></textarea>
+  </div>
+
+  <p class="error" id="parse-error"></p>
+
+  <div class="form-actions">
+    <button type="button" id="generate-btn">Generate newsletter</button>
+  </div>
+
+  <div id="mismatch-warning" class="mismatch-warning" hidden></div>
+
+  <div id="blocked-message" class="blocked-banner" hidden></div>
+
+  <div id="security-decision" class="security-decision" hidden></div>
+
+  <section id="success-panel" class="success-panel" hidden>
+    <h2>Draft — ready to paste into Mailchimp's Campaign Builder</h2>
+
+    <div class="field">
+      <label for="subject-output">Subject line</label>
+      <input type="text" id="subject-output" readonly>
+      <button type="button" id="copy-subject-btn">Copy subject</button>
+    </div>
+
+    <div class="field">
+      <label for="body-output">Plain text body</label>
+      <textarea id="body-output" readonly rows="16"></textarea>
+      <button type="button" id="copy-body-btn">Copy body</button>
+      <span id="action-status" class="action-status" aria-live="polite"></span>
+    </div>
+  </section>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
