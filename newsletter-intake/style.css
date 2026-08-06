@@ -1,0 +1,114 @@
+:root {
+  --ink: #1f2430;
+  --muted: #5b6472;
+  --line: #dfe3ea;
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --accent: #2b5fa8;
+  --accent-dark: #1f4784;
+  --danger: #b3261e;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+}
+
+.page-header { margin-bottom: 1.75rem; }
+.page-header h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+.subtitle { margin: 0; color: var(--muted); }
+
+.field { margin-bottom: 1.1rem; }
+
+label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+
+.req { color: var(--danger); }
+
+input[type="text"], select, textarea {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+  color: var(--ink);
+}
+
+textarea { resize: vertical; }
+
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.error {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: var(--danger);
+  min-height: 1em;
+}
+
+.field.has-error input,
+.field.has-error select,
+.field.has-error textarea {
+  border-color: var(--danger);
+}
+
+.form-actions { display: flex; justify-content: flex-end; margin-top: 1.5rem; }
+
+button {
+  font-family: inherit;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  padding: 0.65rem 1.4rem;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover { background: var(--accent-dark); }
+
+#copy-btn { margin-top: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem; }
+
+.copy-status { margin-left: 0.6rem; font-size: 0.85rem; color: var(--muted); }
+
+.result {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.result h2 { margin-top: 0; }
+
+#tsv-output {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  white-space: pre;
+  overflow-x: auto;
+}
