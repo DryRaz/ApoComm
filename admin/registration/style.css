@@ -102,6 +102,12 @@ input:focus, select:focus, textarea:focus {
   color: var(--muted);
 }
 
+.save-status {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .checkbox-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

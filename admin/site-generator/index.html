@@ -14,6 +14,14 @@
   </header>
 
   <div class="field">
+    <label for="client-select">Load saved client</label>
+    <select id="client-select">
+      <option value="">-- Paste manually, or pick a saved client --</option>
+    </select>
+    <p class="hint">Saved locally in this browser by the registration tool. No data is shared between devices or people.</p>
+  </div>
+
+  <div class="field">
     <label for="tsv-input">TSV row</label>
     <textarea id="tsv-input" rows="6" spellcheck="false" placeholder="APC-2026-001&#9;New&#9;2026-08-06&#9;..."></textarea>
     <p class="error" id="parse-error"></p>

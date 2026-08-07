@@ -14,6 +14,7 @@
   ];
 
   var tsvInput = document.getElementById("tsv-input");
+  var clientSelect = document.getElementById("client-select");
   var parseError = document.getElementById("parse-error");
   var generateBtn = document.getElementById("generate-btn");
   var blockedMessage = document.getElementById("blocked-message");
@@ -28,6 +29,40 @@
 
   var currentHtml = "";
   var currentFileName = "index.html";
+
+  // ---- shared client storage (same convention across all 4 tools) ----
+
+  function listSavedClientIds() {
+    var ids = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      var m = /^apocomm_client_(.+)$/.exec(key);
+      if (m && !/_intake_\d{4}-\d{2}$/.test(m[1])) ids.push(m[1]);
+    }
+    return ids.sort();
+  }
+
+  function populateClientSelect() {
+    var current = clientSelect.value;
+    while (clientSelect.options.length > 1) clientSelect.remove(1);
+    listSavedClientIds().forEach(function (id) {
+      var opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id;
+      clientSelect.appendChild(opt);
+    });
+    if (Array.prototype.some.call(clientSelect.options, function (o) { return o.value === current; })) {
+      clientSelect.value = current;
+    }
+  }
+
+  clientSelect.addEventListener("change", function () {
+    if (!clientSelect.value) return;
+    var saved = localStorage.getItem("apocomm_client_" + clientSelect.value);
+    if (saved) tsvInput.value = saved;
+  });
+
+  populateClientSelect();
 
   function parseRow(raw) {
     var lines = raw.split(/\r?\n/);

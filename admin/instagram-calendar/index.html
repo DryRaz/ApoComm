@@ -10,8 +10,15 @@
 <div class="page">
   <header class="page-header">
     <h1>Instagram content calendar generator</h1>
-    <p class="subtitle">Paste the missionary's 36-column registration row and this month's 8-column intake row (same intake used for the newsletter) to draft a 4-week / ~16-post Instagram calendar.</p>
+    <p class="subtitle">Paste the missionary's 36-column registration row and this month's 10-column intake row (same intake used for the newsletter) to draft a 4-week / ~16-post Instagram calendar.</p>
   </header>
+
+  <div class="field">
+    <label for="client-select">Load saved client</label>
+    <select id="client-select">
+      <option value="">-- Paste manually, or pick a saved client --</option>
+    </select>
+  </div>
 
   <div class="field">
     <label for="reg-input">Registration TSV row (36 columns)</label>
@@ -19,9 +26,18 @@
   </div>
 
   <div class="field">
+    <label for="month-select">Load a past month's intake</label>
+    <select id="month-select">
+      <option value="">-- Paste manually, or pick a saved month --</option>
+    </select>
+  </div>
+
+  <div class="field">
     <label for="intake-input">Monthly intake TSV row (10 columns)</label>
     <textarea id="intake-input" rows="3" spellcheck="false" placeholder="APC-2026-001&#9;Yes&#9;..."></textarea>
   </div>
+
+  <p class="hint">Saved locally in this browser only — no data is shared between devices or people.</p>
 
   <p class="error" id="parse-error"></p>
 
