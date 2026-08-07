@@ -11,9 +11,14 @@
 // ("returns the full 36-value row" -> a bare JSON array; "returns
 // matching clients" -> a JSON array of such rows/objects), tolerating a
 // few reasonable variations. If the live backend's actual response shape
-// differs, the fix belongs in `asRow`/`asList`/`looksEmpty` below — every
-// caller in apocomm-common.js consumes normalized {ok, ...} results and
-// shouldn't need to change.
+// differs, the fix belongs in `asRow`/`asList`/`looksEmpty`/
+// `extractClientId` below — every caller in apocomm-common.js consumes
+// normalized {ok, ...} results and shouldn't need to change.
+//
+// ClientID allocation is server-side now: registerClient sends the row
+// with an empty ClientID placeholder and expects the response to carry
+// back the real, assigned ID (see `extractClientId`) — the client no
+// longer generates its own ID for a successful registration.
 //
 // `ok: false` means a genuine transport failure (network error, non-2xx
 // HTTP, unparseable body) — callers treat this as "could not reach the
@@ -133,15 +138,34 @@
     });
   };
 
+  // ClientID allocation is the backend's job now, not the client's: the
+  // row is sent with an empty ClientID placeholder (regFields.ClientID is
+  // ignored/overwritten server-side) and the response is expected to carry
+  // back the real, assigned ID — as a bare string, the echoed row (ID in
+  // the first slot), or an object under a clientId/ClientID/id key. A
+  // response with no extractable ID is treated as a failure, since the
+  // caller has nothing usable to save under.
+  function extractClientId(json) {
+    if (typeof json === "string") return json.trim() || null;
+    if (Array.isArray(json)) return (json[0] && String(json[0]).trim()) || null;
+    if (json && typeof json === "object") {
+      var id = json.clientId || json.ClientID || json.id || json.ID;
+      return id ? String(id).trim() : null;
+    }
+    return null;
+  }
+
   Backend.registerClient = function (regFields) {
-    var row = ApoComm.regFieldsToBackendRow(regFields);
-    return call({ action: "registerClient", data: JSON.stringify(row) }).then(function (json) {
-      if (json && typeof json === "object" && (json.error || json.success === false)) {
+    var placeholderRow = ApoComm.regFieldsToBackendRow(Object.assign({}, regFields, { ClientID: "" }));
+    return call({ action: "registerClient", data: JSON.stringify(placeholderRow) }).then(function (json) {
+      if (json && typeof json === "object" && !Array.isArray(json) && (json.error || json.success === false)) {
         throw new Error(json.error || "Backend reported failure");
       }
-      return { ok: true };
+      var clientId = extractClientId(json);
+      if (!clientId) throw new Error("Backend did not return an assigned ClientID");
+      return { ok: true, clientId: clientId };
     }).catch(function (err) {
-      return { ok: false, error: err.message };
+      return { ok: false, error: err.message, clientId: null };
     });
   };
 

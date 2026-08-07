@@ -456,14 +456,22 @@
     });
   };
 
-  // Registration submit: always caches locally first (unconditional, same
-  // as before backend integration existed), then tries to write through
-  // to the backend. The local save has already happened either way, so a
-  // failed backend write only means "not yet synced," not "lost."
+  // Registration submit: ClientID allocation is the backend's job now
+  // (see apocomm-backend.js) — `fields.ClientID` here is a placeholder,
+  // not a real ID, so there's nothing sane to cache locally until the
+  // backend responds with the one it actually assigned. Callers only get
+  // a `clientId` back on `ok: true`; on failure it's the caller's
+  // responsibility to generate an offline-only fallback ID (registration
+  // is the only tool that does this, via its own local `nextClientId()`)
+  // and cache under that instead — this function deliberately doesn't
+  // own that fallback-ID policy, since it's specific to the registration
+  // UI, not to backend orchestration in general.
   ApoComm.registerClientRemote = function (fields) {
-    ApoComm.cacheClientRow(fields);
     return ApoComm.Backend.registerClient(fields).then(function (result) {
-      return result.ok ? { ok: true, warning: null } : { ok: false, warning: BACKEND_DOWN_WARNING };
+      if (!result.ok) return { ok: false, clientId: null, warning: BACKEND_DOWN_WARNING };
+      var savedFields = Object.assign({}, fields, { ClientID: result.clientId });
+      ApoComm.cacheClientRow(savedFields);
+      return { ok: true, clientId: result.clientId, warning: null };
     });
   };
 
