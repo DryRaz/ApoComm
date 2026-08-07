@@ -8,6 +8,7 @@
   var intakeInput = document.getElementById("intake-input");
   var clientSearch = document.getElementById("client-search");
   var clientResults = document.getElementById("client-results");
+  var backendWarning = document.getElementById("backend-warning");
   var monthSelect = document.getElementById("month-select");
   var parseError = document.getElementById("parse-error");
   var generateBtn = document.getElementById("generate-btn");
@@ -20,7 +21,20 @@
   var copyBtn = document.getElementById("copy-btn");
   var actionStatus = document.getElementById("action-status");
 
-  // ---- shared client/month storage (same convention across all 4 tools) ----
+  // ---- shared client/month storage (backend-first, same convention
+  // across all 4 tools) — searchByName/getClient against the shared
+  // backend first, falling back to the localStorage cache only if those
+  // calls fail or return nothing; likewise listIntakeMonths/getIntake
+  // for the "load a past month" select. ---------------------------------
+
+  function showBackendWarning(warning) {
+    if (warning) {
+      backendWarning.textContent = warning;
+      backendWarning.hidden = false;
+    } else {
+      backendWarning.hidden = true;
+    }
+  }
 
   function currentClientIdFromRegInput() {
     return (regInput.value.split("\t")[0] || "").trim();
@@ -42,57 +56,71 @@
     if (options.indexOf(current) !== -1) select.value = current;
   }
 
+  var monthToken = 0;
+
   function refreshMonthSelect() {
     var clientId = currentClientIdFromRegInput();
-    var months = clientId ? ApoComm.listSavedMonths(clientId) : [];
-    populateSelect(monthSelect, months, "-- Paste manually, or pick a saved month --");
+    if (!clientId) {
+      populateSelect(monthSelect, [], "-- Paste manually, or pick a saved month --");
+      return;
+    }
+    var token = ++monthToken;
+    ApoComm.fetchIntakeMonths(clientId).then(function (result) {
+      if (token !== monthToken) return; // superseded by a newer client selection
+      showBackendWarning(result.warning);
+      populateSelect(monthSelect, result.months, "-- Paste manually, or pick a saved month --");
+    });
   }
 
   var clientMap = {};
   var activeResultIndex = -1;
+  var searchToken = 0;
 
   function renderClientResults(query) {
-    var all = ApoComm.listSavedClients();
-    clientMap = {};
-    all.forEach(function (c) { clientMap[c.clientId] = c; });
-
-    var q = query.trim().toLowerCase();
-    var matches = !q ? all : all.filter(function (c) {
-      return c.firstName.toLowerCase().indexOf(q) !== -1 ||
-        c.lastName.toLowerCase().indexOf(q) !== -1 ||
-        c._name.toLowerCase().indexOf(q) !== -1;
-    });
-
-    activeResultIndex = -1;
-    clientResults.innerHTML = "";
-
-    if (all.length === 0) {
-      clientResults.innerHTML = '<li class="client-results-empty">No saved clients on this browser — paste the registration TSV row below instead.</li>';
-      clientResults.hidden = false;
-      return;
-    }
-    if (matches.length === 0) {
-      clientResults.innerHTML = '<li class="client-results-empty">No match — paste the registration TSV row below instead.</li>';
-      clientResults.hidden = false;
-      return;
-    }
-    matches.forEach(function (c) {
-      var li = document.createElement("li");
-      li.textContent = c.label;
-      li.setAttribute("role", "option");
-      li.dataset.clientId = c.clientId;
-      clientResults.appendChild(li);
-    });
+    var token = ++searchToken;
+    clientResults.innerHTML = '<li class="client-results-empty">Searching…</li>';
     clientResults.hidden = false;
+
+    ApoComm.searchClients(query).then(function (result) {
+      if (token !== searchToken) return; // a newer search superseded this one
+
+      showBackendWarning(result.warning);
+
+      clientMap = {};
+      result.clients.forEach(function (c) { clientMap[c.clientId] = c; });
+
+      activeResultIndex = -1;
+      clientResults.innerHTML = "";
+
+      if (result.clients.length === 0) {
+        var msg = query.trim()
+          ? "No match — paste the registration TSV row below instead."
+          : "No saved clients yet — paste the registration TSV row below instead.";
+        clientResults.innerHTML = '<li class="client-results-empty">' + msg + "</li>";
+        clientResults.hidden = false;
+        return;
+      }
+      result.clients.forEach(function (c) {
+        var li = document.createElement("li");
+        li.textContent = c.label;
+        li.setAttribute("role", "option");
+        li.dataset.clientId = c.clientId;
+        clientResults.appendChild(li);
+      });
+      clientResults.hidden = false;
+    });
   }
 
   function selectClient(clientId) {
     var client = clientMap[clientId];
     if (!client) return;
-    regInput.value = client.raw;
     clientSearch.value = client.label;
     clientResults.hidden = true;
-    refreshMonthSelect();
+    ApoComm.fetchClientRow(clientId).then(function (result) {
+      showBackendWarning(result.warning);
+      regInput.value = result.fields ? ApoComm.regFieldsToBackendRow(result.fields).join("\t") : client.raw;
+      refreshMonthSelect();
+    });
   }
 
   clientSearch.addEventListener("focus", function () { renderClientResults(clientSearch.value); });
@@ -132,8 +160,10 @@
   monthSelect.addEventListener("change", function () {
     if (!monthSelect.value) return;
     var clientId = currentClientIdFromRegInput();
-    var saved = localStorage.getItem("apocomm_client_" + clientId + "_intake_" + monthSelect.value);
-    if (saved) intakeInput.value = saved;
+    ApoComm.fetchIntakeRow(clientId, monthSelect.value).then(function (result) {
+      showBackendWarning(result.warning);
+      if (result.fields) intakeInput.value = ApoComm.INTAKE_COLUMNS.map(function (c) { return result.fields[c] || ""; }).join("\t");
+    });
   });
 
   refreshMonthSelect();
@@ -196,7 +226,9 @@
     calendarOutput.value = ApoComm.Instagram.renderText(calendar);
     successPanel.hidden = false;
 
-    ApoComm.saveIntakeRow(intakeFields);
+    ApoComm.saveIntakeRemote(intakeFields).then(function (result) {
+      showBackendWarning(result.warning);
+    });
     refreshMonthSelect();
   });
 

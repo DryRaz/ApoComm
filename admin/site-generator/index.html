@@ -17,7 +17,8 @@
     <label for="client-search">Load saved client</label>
     <input type="text" id="client-search" autocomplete="off" placeholder="Type a first or last name to search...">
     <ul id="client-results" class="client-results" role="listbox" hidden></ul>
-    <p class="hint">Searches clients saved locally in this browser by the registration tool. No match? Paste the registration TSV row directly below instead.</p>
+    <p class="hint">Searches the shared client database. No match? Paste the registration TSV row directly below instead.</p>
+    <p id="backend-warning" class="backend-warning" hidden></p>
   </div>
 
   <div class="field">
@@ -53,6 +54,9 @@
   </section>
 </div>
 
+<script src="../../shared/apocomm-config.js"></script>
+<script src="../../shared/apocomm-common.js"></script>
+<script src="../../shared/apocomm-backend.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

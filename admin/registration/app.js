@@ -9,18 +9,7 @@
   var copyBtn = document.getElementById("copy-btn");
   var copyStatus = document.getElementById("copy-status");
   var saveStatus = document.getElementById("save-status");
-
-  // Shared localStorage key convention across all 4 tools (same GitHub
-  // Pages origin, so this works with no backend). Local to this browser
-  // only — never synced between devices or people.
-  function saveClientRow(clientId, tsvRow) {
-    try {
-      localStorage.setItem("apocomm_client_" + clientId, tsvRow);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  var submitBtn = form.querySelector('button[type="submit"]');
 
   // Single-value required fields (block submission if empty).
   var REQUIRED_TEXT_FIELDS = [
@@ -50,17 +39,7 @@
     "for discretion", "no photos please", "anonymous"
   ];
 
-  var TSV_COLUMNS = [
-    "ClientID", "OnboardingStatus", "CreationDate", "LastName", "FirstName",
-    "Email", "WhatsAppPhone", "PrimaryLanguage", "Timezone",
-    "SendingOrganization", "CountryOfService", "CityOfService", "MinistryType",
-    "DepartureDate", "CommitmentDuration", "MissionSummary", "SecuritySensitive",
-    "SecurityInstructions", "CurrentPartnersCount", "AudienceSegments",
-    "ExistingEmailList", "MainObjective", "RequestedServices", "Channels",
-    "DesiredFrequency", "DesiredTone", "ExistingWritingLink", "PhotosLink",
-    "PackageOffer", "MonthlyBudget", "ContractStartDate", "ApostelloManager",
-    "NextAction", "NextFollowUpDate", "FollowUpCount", "Notes"
-  ];
+  var TSV_COLUMNS = ApoComm.REG_COLUMNS;
 
   function sanitize(value) {
     return String(value == null ? "" : value).replace(/[\t\r\n]+/g, " ").trim();
@@ -231,11 +210,24 @@
     tsvOutput.value = row;
     copyStatus.textContent = "";
 
-    if (saveClientRow(values.ClientID, row)) {
-      saveStatus.textContent = "Saved locally as " + values.ClientID + " — available to the other tools on this browser.";
-    } else {
-      saveStatus.textContent = "";
-    }
+    saveStatus.classList.remove("warning");
+    saveStatus.textContent = "Saving " + values.ClientID + "…";
+    submitBtn.disabled = true;
+
+    // Always cached locally first (inside registerClientRemote, before the
+    // network call even starts) so the row is never lost even if the
+    // backend write below fails.
+    ApoComm.registerClientRemote(values).then(function (result) {
+      if (result.ok) {
+        saveStatus.classList.remove("warning");
+        saveStatus.textContent = "Saved as " + values.ClientID + " to the shared database — available to the other tools everywhere.";
+      } else {
+        saveStatus.classList.add("warning");
+        saveStatus.textContent = "Could not reach the shared database — saved locally only on this browser as " +
+          values.ClientID + ". It will need to be synced manually until the connection is available again.";
+      }
+      submitBtn.disabled = false;
+    });
 
     resultSection.hidden = false;
     resultSection.scrollIntoView({ behavior: "smooth", block: "start" });

@@ -86,6 +86,13 @@ select:focus {
   color: var(--muted);
 }
 
+.backend-warning {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--warn);
+  font-weight: 600;
+}
+
 .client-lookup {
   position: relative;
 }

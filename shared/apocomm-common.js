@@ -27,6 +27,18 @@
     "UpcomingProjects", "NumbersUpdate", "NewPhotoLinks", "AnythingToAvoid", "SubmissionDate"
   ];
 
+  // The backend's Monthly_Intakes row shape (11 values, per the saveIntake/
+  // getIntake contract) adds an explicit "Month" (YYYY-MM) column right
+  // after ClientID, alongside the 10 local INTAKE_COLUMNS — Month is what
+  // the backend indexes getIntake/listIntakeMonths by, distinct from the
+  // exact-day SubmissionDate. Derived automatically from SubmissionDate
+  // when writing; never shown to the user, never round-tripped through the
+  // local TSV cache (which stays 10 columns, unchanged).
+  ApoComm.BACKEND_INTAKE_COLUMNS = [
+    "ClientID", "Month", "IsFirstNewsletter", "Events", "MeetingsSummary", "PrayerNeeds",
+    "UpcomingProjects", "NumbersUpdate", "NewPhotoLinks", "AnythingToAvoid", "SubmissionDate"
+  ];
+
   // Events/PrayerNeeds/UpcomingProjects are semicolon-joined lists (see
   // newsletter-intake); any number of entries, including zero.
   ApoComm.splitList = function (raw) {
@@ -233,13 +245,59 @@
       .replace(/'/g, "&#39;");
   };
 
+  // ---- row <-> fields conversion (backend talks JSON arrays, the local
+  // cache talks TSV strings — both represent the same `fields` object,
+  // keyed by column name, that every generator/gate already works with) --
+
+  ApoComm.regFieldsToBackendRow = function (fields) {
+    return ApoComm.REG_COLUMNS.map(function (c) { return fields[c] || ""; });
+  };
+
+  ApoComm.backendRowToRegFields = function (row) {
+    var fields = {};
+    ApoComm.REG_COLUMNS.forEach(function (c, i) { fields[c] = (row[i] == null ? "" : String(row[i])).trim(); });
+    return fields;
+  };
+
+  ApoComm.intakeFieldsToBackendRow = function (fields) {
+    var month = (/^\d{4}-\d{2}/.exec(fields.SubmissionDate || "") || [])[0] || "";
+    return ApoComm.BACKEND_INTAKE_COLUMNS.map(function (c) {
+      return c === "Month" ? month : (fields[c] || "");
+    });
+  };
+
+  ApoComm.backendRowToIntakeFields = function (row) {
+    var fields = {};
+    ApoComm.BACKEND_INTAKE_COLUMNS.forEach(function (c, i) {
+      if (c === "Month") return; // derived, not part of the local 10-column shape
+      fields[c] = (row[i] == null ? "" : String(row[i])).trim();
+    });
+    return fields;
+  };
+
+  // Lightweight {clientId, firstName, lastName, country, raw} summary —
+  // the same shape listSavedClients() produces from a local TSV row — so
+  // backend-sourced results can flow through the same disambiguation/
+  // rendering code every tool's client-search already uses.
+  ApoComm.fieldsToClientSummary = function (fields) {
+    return {
+      clientId: fields.ClientID || "",
+      lastName: fields.LastName || "",
+      firstName: fields.FirstName || "",
+      country: fields.CountryOfService || "",
+      raw: ApoComm.regFieldsToBackendRow(fields).join("\t")
+    };
+  };
+
   // ---- shared client lookup (localStorage) -----------------------------
 
   // Two clients sharing a name get "FirstName LastName (Country)" if
   // their countries are all different, otherwise "FirstName LastName
   // (last 4 of ClientID)" — country is preferred since it reads more
-  // usefully than an opaque ID fragment.
-  function assignDisambiguatedLabels(clients) {
+  // usefully than an opaque ID fragment. Exported (not just used by
+  // listSavedClients) so backend-sourced result lists can be labeled the
+  // same way as local ones.
+  ApoComm.assignDisambiguatedLabels = function (clients) {
     var byName = {};
     clients.forEach(function (c) {
       var name = (c.firstName + " " + c.lastName).trim() || c.clientId;
@@ -258,12 +316,14 @@
         c.label = countriesUsable ? name + " (" + c.country + ")" : name + " (" + c.clientId.slice(-4) + ")";
       });
     });
-  }
+    return clients;
+  };
 
   // Reads every saved registration row and pulls out just enough (name,
   // country) to build a human-friendly, disambiguated label — the raw
   // ClientID (APC-YYYY-000) is never shown to the operator, only used
-  // internally once a result is picked.
+  // internally once a result is picked. This is the offline/local-cache
+  // path; ApoComm.searchClients() below tries the shared backend first.
   ApoComm.listSavedClients = function () {
     var clients = [];
     for (var i = 0; i < localStorage.length; i++) {
@@ -280,13 +340,25 @@
         raw: raw
       });
     }
-    assignDisambiguatedLabels(clients);
+    ApoComm.assignDisambiguatedLabels(clients);
     clients.sort(function (a, b) { return a.label.localeCompare(b.label); });
     return clients;
   };
 
   ApoComm.getSavedClientRow = function (clientId) {
     return localStorage.getItem("apocomm_client_" + clientId);
+  };
+
+  // Writes/refreshes the local offline-cache copy of a registration row —
+  // called both after a successful registerClient (so the browser that
+  // just registered has an immediate local copy) and after any successful
+  // backend read (searchClients/fetchClientRow), so the cache stays warm
+  // for next time the backend is unreachable.
+  ApoComm.cacheClientRow = function (fields) {
+    if (!fields || !fields.ClientID) return;
+    try {
+      localStorage.setItem("apocomm_client_" + fields.ClientID, ApoComm.regFieldsToBackendRow(fields).join("\t"));
+    } catch (e) { /* ignore storage errors (e.g. private browsing) */ }
   };
 
   ApoComm.listSavedMonths = function (clientId) {
@@ -310,5 +382,128 @@
     try {
       localStorage.setItem("apocomm_client_" + clientId + "_intake_" + month, row);
     } catch (e) { /* ignore storage errors (e.g. private browsing) */ }
+  };
+
+  // ---- backend-first orchestration, localStorage as offline fallback ---
+  //
+  // Every function below tries the shared Google Sheets backend
+  // (ApoComm.Backend.*, from apocomm-backend.js) first and falls back to
+  // the local cache only on a genuine transport failure (ApoComm.Backend
+  // already distinguishes that from a reachable-but-empty answer — see
+  // apocomm-backend.js). A successful backend read also refreshes the
+  // local cache, so the next offline attempt has the freshest data.
+  //
+  // Results carry { source: "backend"|"local", warning: string|null } so
+  // every tool can show the same "Could not reach the shared database —
+  // using local data only" message without duplicating that decision.
+
+  var BACKEND_DOWN_WARNING = "Could not reach the shared database — using local data only.";
+  ApoComm.BACKEND_DOWN_WARNING = BACKEND_DOWN_WARNING;
+
+  function localSearchMatches(query) {
+    var all = ApoComm.listSavedClients();
+    var q = query.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter(function (c) {
+      return c.firstName.toLowerCase().indexOf(q) !== -1 ||
+        c.lastName.toLowerCase().indexOf(q) !== -1 ||
+        c._name.toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  // Backend first; falls back to the local cache if the call fails OR
+  // comes back with zero matches (this browser may hold a locally-cached
+  // client — e.g. registered while offline — that the backend search
+  // genuinely has no record of yet).
+  ApoComm.searchClients = function (query) {
+    return ApoComm.Backend.searchByName(query).then(function (result) {
+      if (result.ok && result.clients.length > 0) {
+        var summaries = result.clients.map(function (fields) {
+          ApoComm.cacheClientRow(fields);
+          return ApoComm.fieldsToClientSummary(fields);
+        });
+        ApoComm.assignDisambiguatedLabels(summaries);
+        summaries.sort(function (a, b) { return a.label.localeCompare(b.label); });
+        return { clients: summaries, source: "backend", warning: null };
+      }
+      return {
+        clients: localSearchMatches(query),
+        source: "local",
+        warning: result.ok ? null : BACKEND_DOWN_WARNING
+      };
+    });
+  };
+
+  // Always fetches the authoritative full row for a selected client via
+  // getClient rather than trusting whatever the search step returned.
+  // `result.ok` from Backend.getClient means "reachable" — a reachable
+  // backend with no such record still checks the local cache (e.g. an
+  // offline registration not yet synced) before giving up, with no
+  // connectivity warning in that case since nothing is actually down.
+  ApoComm.fetchClientRow = function (clientId) {
+    return ApoComm.Backend.getClient(clientId).then(function (result) {
+      if (result.ok && result.fields) {
+        ApoComm.cacheClientRow(result.fields);
+        return { fields: result.fields, source: "backend", warning: null };
+      }
+      var raw = ApoComm.getSavedClientRow(clientId);
+      var localFields = raw ? ApoComm.parseRow(raw, ApoComm.REG_COLUMNS, "Cached registration row") : null;
+      return {
+        fields: localFields,
+        source: "local",
+        warning: result.ok ? null : BACKEND_DOWN_WARNING
+      };
+    });
+  };
+
+  // Registration submit: always caches locally first (unconditional, same
+  // as before backend integration existed), then tries to write through
+  // to the backend. The local save has already happened either way, so a
+  // failed backend write only means "not yet synced," not "lost."
+  ApoComm.registerClientRemote = function (fields) {
+    ApoComm.cacheClientRow(fields);
+    return ApoComm.Backend.registerClient(fields).then(function (result) {
+      return result.ok ? { ok: true, warning: null } : { ok: false, warning: BACKEND_DOWN_WARNING };
+    });
+  };
+
+  // Intake submit: same always-cache-locally-then-write-through pattern,
+  // targeting the backend's Monthly_Intakes tab.
+  ApoComm.saveIntakeRemote = function (intakeFields) {
+    ApoComm.saveIntakeRow(intakeFields);
+    return ApoComm.Backend.saveIntake(intakeFields).then(function (result) {
+      return result.ok ? { ok: true, warning: null } : { ok: false, warning: BACKEND_DOWN_WARNING };
+    });
+  };
+
+  // Past-month list for the "load a past month" selects — backend first,
+  // merged with any local-only months (e.g. saved while offline and not
+  // yet synced) so nothing locally saved is ever hidden from the list.
+  ApoComm.fetchIntakeMonths = function (clientId) {
+    return ApoComm.Backend.listIntakeMonths(clientId).then(function (result) {
+      var localMonths = ApoComm.listSavedMonths(clientId);
+      if (!result.ok) {
+        return { months: localMonths, source: "local", warning: BACKEND_DOWN_WARNING };
+      }
+      var merged = result.months.slice();
+      localMonths.forEach(function (m) { if (merged.indexOf(m) === -1) merged.push(m); });
+      merged.sort().reverse();
+      return { months: merged, source: "backend", warning: null };
+    });
+  };
+
+  ApoComm.fetchIntakeRow = function (clientId, month) {
+    return ApoComm.Backend.getIntake(clientId, month).then(function (result) {
+      if (result.ok && result.fields) {
+        return { fields: result.fields, source: "backend", warning: null };
+      }
+      var raw = localStorage.getItem("apocomm_client_" + clientId + "_intake_" + month);
+      var localFields = raw ? ApoComm.parseRow(raw, ApoComm.INTAKE_COLUMNS, "Cached intake row") : null;
+      return {
+        fields: localFields,
+        source: "local",
+        warning: result.ok ? null : BACKEND_DOWN_WARNING
+      };
+    });
   };
 })(window);

@@ -16,6 +16,7 @@
   var tsvInput = document.getElementById("tsv-input");
   var clientSearch = document.getElementById("client-search");
   var clientResults = document.getElementById("client-results");
+  var backendWarning = document.getElementById("backend-warning");
   var parseError = document.getElementById("parse-error");
   var generateBtn = document.getElementById("generate-btn");
   var blockedMessage = document.getElementById("blocked-message");
@@ -31,102 +32,69 @@
   var currentHtml = "";
   var currentFileName = "index.html";
 
-  // ---- shared client lookup (same convention across all 4 tools) ------
+  // ---- shared client lookup (backend-first, same convention across all
+  // 4 tools) — searchByName against the shared backend first; falls back
+  // to the localStorage cache only if that call fails or returns nothing.
+  // Once a result is selected, the full row is re-fetched via getClient
+  // rather than trusting whatever the search step returned. ------------
 
-  // Reads every saved registration row and pulls out just enough (name,
-  // country) to build a human-friendly, disambiguated label — the raw
-  // ClientID (APC-YYYY-000) is never shown to the operator, only used
-  // internally once a result is picked.
-  function listSavedClients() {
-    var clients = [];
-    for (var i = 0; i < localStorage.length; i++) {
-      var key = localStorage.key(i);
-      var m = /^apocomm_client_(.+)$/.exec(key);
-      if (!m || /_intake_\d{4}-\d{2}$/.test(m[1])) continue;
-      var raw = localStorage.getItem(key);
-      var cols = raw.split("\t");
-      clients.push({
-        clientId: m[1],
-        lastName: (cols[3] || "").trim(),
-        firstName: (cols[4] || "").trim(),
-        country: (cols[10] || "").trim(),
-        raw: raw
-      });
+  function showBackendWarning(warning) {
+    if (warning) {
+      backendWarning.textContent = warning;
+      backendWarning.hidden = false;
+    } else {
+      backendWarning.hidden = true;
     }
-    assignDisambiguatedLabels(clients);
-    clients.sort(function (a, b) { return a.label.localeCompare(b.label); });
-    return clients;
-  }
-
-  // Two clients sharing a name get "FirstName LastName (Country)" if
-  // their countries are all different, otherwise "FirstName LastName
-  // (last 4 of ClientID)" — country is preferred since it's what the
-  // spec asks for and reads more usefully than an opaque ID fragment.
-  function assignDisambiguatedLabels(clients) {
-    var byName = {};
-    clients.forEach(function (c) {
-      var name = (c.firstName + " " + c.lastName).trim() || c.clientId;
-      c._name = name;
-      (byName[name] = byName[name] || []).push(c);
-    });
-    Object.keys(byName).forEach(function (name) {
-      var group = byName[name];
-      if (group.length === 1) {
-        group[0].label = name;
-        return;
-      }
-      var countries = group.map(function (g) { return g.country; });
-      var countriesUsable = countries.every(Boolean) && new Set(countries).size === group.length;
-      group.forEach(function (c) {
-        c.label = countriesUsable ? name + " (" + c.country + ")" : name + " (" + c.clientId.slice(-4) + ")";
-      });
-    });
   }
 
   var clientMap = {};
   var activeResultIndex = -1;
+  var searchToken = 0;
 
   function renderClientResults(query) {
-    var all = listSavedClients();
-    clientMap = {};
-    all.forEach(function (c) { clientMap[c.clientId] = c; });
-
-    var q = query.trim().toLowerCase();
-    var matches = !q ? all : all.filter(function (c) {
-      return c.firstName.toLowerCase().indexOf(q) !== -1 ||
-        c.lastName.toLowerCase().indexOf(q) !== -1 ||
-        c._name.toLowerCase().indexOf(q) !== -1;
-    });
-
-    activeResultIndex = -1;
-    clientResults.innerHTML = "";
-
-    if (all.length === 0) {
-      clientResults.innerHTML = '<li class="client-results-empty">No saved clients on this browser — paste the registration TSV row below instead.</li>';
-      clientResults.hidden = false;
-      return;
-    }
-    if (matches.length === 0) {
-      clientResults.innerHTML = '<li class="client-results-empty">No match — paste the registration TSV row below instead.</li>';
-      clientResults.hidden = false;
-      return;
-    }
-    matches.forEach(function (c) {
-      var li = document.createElement("li");
-      li.textContent = c.label;
-      li.setAttribute("role", "option");
-      li.dataset.clientId = c.clientId;
-      clientResults.appendChild(li);
-    });
+    var token = ++searchToken;
+    clientResults.innerHTML = '<li class="client-results-empty">Searching…</li>';
     clientResults.hidden = false;
+
+    ApoComm.searchClients(query).then(function (result) {
+      if (token !== searchToken) return; // a newer search superseded this one
+
+      showBackendWarning(result.warning);
+
+      clientMap = {};
+      result.clients.forEach(function (c) { clientMap[c.clientId] = c; });
+
+      activeResultIndex = -1;
+      clientResults.innerHTML = "";
+
+      if (result.clients.length === 0) {
+        var msg = query.trim()
+          ? "No match — paste the registration TSV row below instead."
+          : "No saved clients yet — paste the registration TSV row below instead.";
+        clientResults.innerHTML = '<li class="client-results-empty">' + msg + "</li>";
+        clientResults.hidden = false;
+        return;
+      }
+      result.clients.forEach(function (c) {
+        var li = document.createElement("li");
+        li.textContent = c.label;
+        li.setAttribute("role", "option");
+        li.dataset.clientId = c.clientId;
+        clientResults.appendChild(li);
+      });
+      clientResults.hidden = false;
+    });
   }
 
   function selectClient(clientId) {
     var client = clientMap[clientId];
     if (!client) return;
-    tsvInput.value = client.raw;
     clientSearch.value = client.label;
     clientResults.hidden = true;
+    ApoComm.fetchClientRow(clientId).then(function (result) {
+      showBackendWarning(result.warning);
+      tsvInput.value = result.fields ? ApoComm.regFieldsToBackendRow(result.fields).join("\t") : client.raw;
+    });
   }
 
   clientSearch.addEventListener("focus", function () { renderClientResults(clientSearch.value); });

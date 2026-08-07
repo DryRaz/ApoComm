@@ -4,6 +4,7 @@
   var form = document.getElementById("intake-form");
   var clientSearch = document.getElementById("client-search");
   var clientResults = document.getElementById("client-results");
+  var backendWarning = document.getElementById("backend-warning");
   var clientIdInput = document.getElementById("ClientID");
   var resultSection = document.getElementById("result");
   var tsvOutput = document.getElementById("tsv-output");
@@ -32,47 +33,60 @@
   var LIST_FIELDS = ["Events", "PrayerNeeds", "UpcomingProjects"];
   var TSV_COLUMNS = ApoComm.INTAKE_COLUMNS;
 
-  // ---- client-search lookup (same pattern as the 3 admin tools; here it
-  // fills the existing #ClientID field rather than a TSV textarea, since
-  // missionaries submit this form and don't have a registration row to
-  // paste — only their own Client ID, which they may or may not remember) ----
+  // ---- client-search lookup (backend-first, same pattern as the 3 admin
+  // tools; here it fills the existing #ClientID field rather than a TSV
+  // textarea, since missionaries submit this form and don't have a
+  // registration row to paste — only their own Client ID, which they may
+  // or may not remember). searchByName against the shared backend first;
+  // falls back to the localStorage cache only if that call fails or
+  // returns nothing. ------------------------------------------------------
+
+  function showBackendWarning(warning) {
+    if (warning) {
+      backendWarning.textContent = warning;
+      backendWarning.hidden = false;
+    } else {
+      backendWarning.hidden = true;
+    }
+  }
 
   var clientMap = {};
   var activeResultIndex = -1;
+  var searchToken = 0;
 
   function renderClientResults(query) {
-    var all = ApoComm.listSavedClients();
-    clientMap = {};
-    all.forEach(function (c) { clientMap[c.clientId] = c; });
-
-    var q = query.trim().toLowerCase();
-    var matches = !q ? all : all.filter(function (c) {
-      return c.firstName.toLowerCase().indexOf(q) !== -1 ||
-        c.lastName.toLowerCase().indexOf(q) !== -1 ||
-        c._name.toLowerCase().indexOf(q) !== -1;
-    });
-
-    activeResultIndex = -1;
-    clientResults.innerHTML = "";
-
-    if (all.length === 0) {
-      clientResults.innerHTML = '<li class="client-results-empty">No saved clients on this browser — type your Client ID directly below instead.</li>';
-      clientResults.hidden = false;
-      return;
-    }
-    if (matches.length === 0) {
-      clientResults.innerHTML = '<li class="client-results-empty">No match — type your Client ID directly below instead.</li>';
-      clientResults.hidden = false;
-      return;
-    }
-    matches.forEach(function (c) {
-      var li = document.createElement("li");
-      li.textContent = c.label;
-      li.setAttribute("role", "option");
-      li.dataset.clientId = c.clientId;
-      clientResults.appendChild(li);
-    });
+    var token = ++searchToken;
+    clientResults.innerHTML = '<li class="client-results-empty">Searching…</li>';
     clientResults.hidden = false;
+
+    ApoComm.searchClients(query).then(function (result) {
+      if (token !== searchToken) return; // a newer search superseded this one
+
+      showBackendWarning(result.warning);
+
+      clientMap = {};
+      result.clients.forEach(function (c) { clientMap[c.clientId] = c; });
+
+      activeResultIndex = -1;
+      clientResults.innerHTML = "";
+
+      if (result.clients.length === 0) {
+        var msg = query.trim()
+          ? "No match — type your Client ID directly below instead."
+          : "No saved clients yet — type your Client ID directly below instead.";
+        clientResults.innerHTML = '<li class="client-results-empty">' + msg + "</li>";
+        clientResults.hidden = false;
+        return;
+      }
+      result.clients.forEach(function (c) {
+        var li = document.createElement("li");
+        li.textContent = c.label;
+        li.setAttribute("role", "option");
+        li.dataset.clientId = c.clientId;
+        clientResults.appendChild(li);
+      });
+      clientResults.hidden = false;
+    });
   }
 
   function selectClient(clientId) {
@@ -196,6 +210,7 @@
   function resetOutcome() {
     notFoundMessage.hidden = true;
     blockedMessage.hidden = true;
+    backendWarning.hidden = true;
     resultSection.hidden = true;
     resultsScreen.hidden = true;
     newsletterSecurityDecision.hidden = true;
@@ -237,6 +252,8 @@
     instagramSecurityDecision.hidden = false;
   }
 
+  var submitBtn = form.querySelector('button[type="submit"]');
+
   form.addEventListener("submit", function (event) {
     event.preventDefault();
     resetOutcome();
@@ -249,62 +266,67 @@
 
     var intakeFields = buildFields();
 
-    var regRaw = ApoComm.getSavedClientRow(intakeFields.ClientID);
-    if (!regRaw) {
-      notFoundMessage.textContent = "No registration profile found for this client. Load or paste it first.";
-      notFoundMessage.hidden = false;
-      notFoundMessage.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
+    submitBtn.disabled = true;
 
-    var regFields;
-    try {
-      regFields = ApoComm.parseRow(regRaw, ApoComm.REG_COLUMNS, "Saved registration row");
-    } catch (err) {
-      notFoundMessage.textContent = "Saved registration profile is corrupted: " + err.message + " Load or paste it again in one of the admin tools.";
-      notFoundMessage.hidden = false;
-      notFoundMessage.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
+    // Backend first (so a second browser with empty localStorage can still
+    // find a registration saved from a different browser); falls back to
+    // this browser's local cache only if the backend is unreachable.
+    ApoComm.fetchClientRow(intakeFields.ClientID).then(function (lookup) {
+      showBackendWarning(lookup.warning);
 
-    tsvOutput.value = buildRow(intakeFields);
-    copyStatus.textContent = "";
-    resultSection.hidden = false;
+      if (!lookup.fields) {
+        notFoundMessage.textContent = "No registration profile found for this client. Load or paste it first.";
+        notFoundMessage.hidden = false;
+        notFoundMessage.scrollIntoView({ behavior: "smooth", block: "center" });
+        submitBtn.disabled = false;
+        return;
+      }
 
-    ApoComm.saveIntakeRow(intakeFields);
+      var regFields = lookup.fields;
 
-    // The blocking decision (SecuritySensitive=YES + empty
-    // SecurityInstructions) depends only on regFields, not on which
-    // topic set is being evaluated, so newsletter's and Instagram's
-    // gates always agree on block/no-block — checked once in effect,
-    // even though each tool's allow-map has a different topic shape.
-    var nlSecurity = ApoComm.Newsletter.evaluateSecurityGate(regFields);
-    if (nlSecurity.blocked) {
-      blockedMessage.textContent = nlSecurity.reason;
-      blockedMessage.hidden = false;
-      blockedMessage.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    var igSecurity = ApoComm.Instagram.evaluateSecurityGate(regFields);
+      tsvOutput.value = buildRow(intakeFields);
+      copyStatus.textContent = "";
+      resultSection.hidden = false;
 
-    var draft = ApoComm.Newsletter.build(regFields, intakeFields, nlSecurity);
-    showNewsletterDecision(nlSecurity, draft.redactions, draft.expansionNotes);
-    newsletterSubjectOutput.value = draft.subject;
-    newsletterBodyOutput.value = draft.body;
+      ApoComm.saveIntakeRemote(intakeFields).then(function (result) {
+        if (result.warning) showBackendWarning(result.warning);
+      });
 
-    try {
-      var calendar = ApoComm.Instagram.build(regFields, intakeFields, igSecurity);
-      showInstagramDecision(igSecurity, calendar);
-      instagramView.innerHTML = ApoComm.Instagram.renderHtml(calendar);
-      instagramOutput.value = ApoComm.Instagram.renderText(calendar);
-      instagramOutputField.hidden = false;
-    } catch (err) {
-      instagramError.textContent = "Instagram calendar could not be generated: " + err.message;
-      instagramError.hidden = false;
-    }
+      // The blocking decision (SecuritySensitive=YES + empty
+      // SecurityInstructions) depends only on regFields, not on which
+      // topic set is being evaluated, so newsletter's and Instagram's
+      // gates always agree on block/no-block — checked once in effect,
+      // even though each tool's allow-map has a different topic shape.
+      var nlSecurity = ApoComm.Newsletter.evaluateSecurityGate(regFields);
+      if (nlSecurity.blocked) {
+        blockedMessage.textContent = nlSecurity.reason;
+        blockedMessage.hidden = false;
+        blockedMessage.scrollIntoView({ behavior: "smooth", block: "center" });
+        submitBtn.disabled = false;
+        return;
+      }
+      var igSecurity = ApoComm.Instagram.evaluateSecurityGate(regFields);
 
-    resultsScreen.hidden = false;
-    resultsScreen.scrollIntoView({ behavior: "smooth", block: "start" });
+      var draft = ApoComm.Newsletter.build(regFields, intakeFields, nlSecurity);
+      showNewsletterDecision(nlSecurity, draft.redactions, draft.expansionNotes);
+      newsletterSubjectOutput.value = draft.subject;
+      newsletterBodyOutput.value = draft.body;
+
+      try {
+        var calendar = ApoComm.Instagram.build(regFields, intakeFields, igSecurity);
+        showInstagramDecision(igSecurity, calendar);
+        instagramView.innerHTML = ApoComm.Instagram.renderHtml(calendar);
+        instagramOutput.value = ApoComm.Instagram.renderText(calendar);
+        instagramOutputField.hidden = false;
+      } catch (err) {
+        instagramError.textContent = "Instagram calendar could not be generated: " + err.message;
+        instagramError.hidden = false;
+      }
+
+      resultsScreen.hidden = false;
+      resultsScreen.scrollIntoView({ behavior: "smooth", block: "start" });
+      submitBtn.disabled = false;
+    });
   });
 
   copyBtn.addEventListener("click", function () {

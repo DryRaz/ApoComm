@@ -10,6 +10,9 @@
   --danger-bg: #fdecea;
   --ok-bg: #eef6ef;
   --ok-line: #bfe0c4;
+  --warn: #8a5a00;
+  --warn-bg: #fff6e0;
+  --warn-line: #f0d68a;
   --radius: 8px;
 }
 
@@ -78,6 +81,13 @@ select:focus {
   margin: 0.35rem 0 0;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+.backend-warning {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--warn);
+  font-weight: 600;
 }
 
 .client-lookup {

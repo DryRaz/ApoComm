@@ -8,6 +8,7 @@
   --accent-dark: #1f4784;
   --danger: #b3261e;
   --danger-bg: #fdecea;
+  --warn: #8a5a00;
   --radius: 8px;
 }
 
@@ -106,6 +107,11 @@ input:focus, select:focus, textarea:focus {
   margin: 0.75rem 0 0;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+.save-status.warning {
+  color: var(--warn);
+  font-weight: 600;
 }
 
 .checkbox-grid {

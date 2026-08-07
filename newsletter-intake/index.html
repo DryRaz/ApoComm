@@ -19,6 +19,7 @@
       <input type="text" id="client-search" autocomplete="off" placeholder="Type your first or last name to search...">
       <ul id="client-results" class="client-results" role="listbox" hidden></ul>
       <p class="hint">Selecting your name fills in your Client ID below automatically.</p>
+      <p id="backend-warning" class="backend-warning" hidden></p>
     </div>
 
     <div class="field">
@@ -135,7 +136,9 @@
   </section>
 </div>
 
+<script src="../shared/apocomm-config.js"></script>
 <script src="../shared/apocomm-common.js"></script>
+<script src="../shared/apocomm-backend.js"></script>
 <script src="../shared/newsletter-core.js"></script>
 <script src="../shared/instagram-core.js"></script>
 <script src="app.js"></script>
