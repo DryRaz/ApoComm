@@ -13,11 +13,10 @@
     <p class="subtitle">Paste the missionary's 36-column registration row and this month's 10-column intake row to draft the newsletter.</p>
   </header>
 
-  <div class="field">
-    <label for="client-select">Load saved client</label>
-    <select id="client-select">
-      <option value="">-- Paste manually, or pick a saved client --</option>
-    </select>
+  <div class="field client-lookup">
+    <label for="client-search">Load saved client</label>
+    <input type="text" id="client-search" autocomplete="off" placeholder="Type a first or last name to search...">
+    <ul id="client-results" class="client-results" role="listbox" hidden></ul>
   </div>
 
   <div class="field">
