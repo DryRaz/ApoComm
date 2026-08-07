@@ -58,6 +58,28 @@ textarea:focus {
   outline-offset: 1px;
 }
 
+select {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .error {
   margin: 0.3rem 0 0;
   font-size: 0.85rem;

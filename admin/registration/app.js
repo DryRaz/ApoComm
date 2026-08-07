@@ -8,6 +8,19 @@
   var tsvOutput = document.getElementById("tsv-output");
   var copyBtn = document.getElementById("copy-btn");
   var copyStatus = document.getElementById("copy-status");
+  var saveStatus = document.getElementById("save-status");
+
+  // Shared localStorage key convention across all 4 tools (same GitHub
+  // Pages origin, so this works with no backend). Local to this browser
+  // only — never synced between devices or people.
+  function saveClientRow(clientId, tsvRow) {
+    try {
+      localStorage.setItem("apocomm_client_" + clientId, tsvRow);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   // Single-value required fields (block submission if empty).
   var REQUIRED_TEXT_FIELDS = [
@@ -62,7 +75,11 @@
 
   function nextClientId() {
     var year = new Date().getFullYear();
-    var key = "apocomm_client_seq_" + year;
+    // Deliberately NOT prefixed "apocomm_client_" — that prefix is reserved
+    // for saved client TSV rows (see saveClientRow()) and is scanned by
+    // the other tools' "load saved client" dropdowns; this internal
+    // counter must never appear in that list.
+    var key = "apocomm_seq_" + year;
     var seq = parseInt(localStorage.getItem(key) || "0", 10) + 1;
     localStorage.setItem(key, String(seq));
     return "APC-" + year + "-" + String(seq).padStart(3, "0");
@@ -210,8 +227,15 @@
     securityBanner.hidden = values.SecuritySensitive !== "YES";
     completionLine.textContent = "Required-field completion: " + stats.percent + "% (" +
       stats.filled + "/" + stats.total + " tracked fields).";
-    tsvOutput.value = toTsvRow(values);
+    var row = toTsvRow(values);
+    tsvOutput.value = row;
     copyStatus.textContent = "";
+
+    if (saveClientRow(values.ClientID, row)) {
+      saveStatus.textContent = "Saved locally as " + values.ClientID + " — available to the other tools on this browser.";
+    } else {
+      saveStatus.textContent = "";
+    }
 
     resultSection.hidden = false;
     resultSection.scrollIntoView({ behavior: "smooth", block: "start" });

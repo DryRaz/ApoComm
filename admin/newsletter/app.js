@@ -26,6 +26,8 @@
 
   var regInput = document.getElementById("reg-input");
   var intakeInput = document.getElementById("intake-input");
+  var clientSelect = document.getElementById("client-select");
+  var monthSelect = document.getElementById("month-select");
   var parseError = document.getElementById("parse-error");
   var generateBtn = document.getElementById("generate-btn");
   var mismatchWarning = document.getElementById("mismatch-warning");
@@ -37,6 +39,90 @@
   var copySubjectBtn = document.getElementById("copy-subject-btn");
   var copyBodyBtn = document.getElementById("copy-body-btn");
   var actionStatus = document.getElementById("action-status");
+
+  // ---- shared client/month storage (same convention across all 4 tools) ----
+
+  function listSavedClientIds() {
+    var ids = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      var m = /^apocomm_client_(.+)$/.exec(key);
+      if (m && !/_intake_\d{4}-\d{2}$/.test(m[1])) ids.push(m[1]);
+    }
+    return ids.sort();
+  }
+
+  function listSavedMonths(clientId) {
+    var prefix = "apocomm_client_" + clientId + "_intake_";
+    var months = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (key.indexOf(prefix) === 0) months.push(key.slice(prefix.length));
+    }
+    return months.sort().reverse();
+  }
+
+  function currentClientIdFromRegInput() {
+    return (regInput.value.split("\t")[0] || "").trim();
+  }
+
+  function populateSelect(select, options, placeholder) {
+    var current = select.value;
+    select.innerHTML = "";
+    var placeholderOpt = document.createElement("option");
+    placeholderOpt.value = "";
+    placeholderOpt.textContent = placeholder;
+    select.appendChild(placeholderOpt);
+    options.forEach(function (value) {
+      var opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = value;
+      select.appendChild(opt);
+    });
+    if (options.indexOf(current) !== -1) select.value = current;
+  }
+
+  function refreshClientSelect() {
+    populateSelect(clientSelect, listSavedClientIds(), "-- Paste manually, or pick a saved client --");
+  }
+
+  function refreshMonthSelect() {
+    var clientId = currentClientIdFromRegInput();
+    var months = clientId ? listSavedMonths(clientId) : [];
+    populateSelect(monthSelect, months, "-- Paste manually, or pick a saved month --");
+  }
+
+  clientSelect.addEventListener("change", function () {
+    if (!clientSelect.value) return;
+    var saved = localStorage.getItem("apocomm_client_" + clientSelect.value);
+    if (saved) regInput.value = saved;
+    refreshMonthSelect();
+  });
+
+  regInput.addEventListener("input", refreshMonthSelect);
+
+  monthSelect.addEventListener("change", function () {
+    if (!monthSelect.value) return;
+    var clientId = currentClientIdFromRegInput();
+    var saved = localStorage.getItem("apocomm_client_" + clientId + "_intake_" + monthSelect.value);
+    if (saved) intakeInput.value = saved;
+  });
+
+  refreshClientSelect();
+  refreshMonthSelect();
+
+  // Saves under the intake row's own ClientID (not necessarily whatever
+  // is currently in reg-input) — that's the record this intake actually
+  // belongs to, mismatch-warning notwithstanding.
+  function saveIntakeRow(intakeFields) {
+    var clientId = intakeFields.ClientID;
+    var month = (/^\d{4}-\d{2}/.exec(intakeFields.SubmissionDate) || [])[0];
+    if (!clientId || !month) return;
+    var row = INTAKE_COLUMNS.map(function (c) { return intakeFields[c] || ""; }).join("\t");
+    try {
+      localStorage.setItem("apocomm_client_" + clientId + "_intake_" + month, row);
+    } catch (e) { /* ignore storage errors (e.g. private browsing) */ }
+  }
 
   // ---- parsing ----------------------------------------------------
 
@@ -770,6 +856,9 @@
     subjectOutput.value = draft.subject;
     bodyOutput.value = draft.body;
     successPanel.hidden = false;
+
+    saveIntakeRow(intakeFields);
+    refreshMonthSelect();
   });
 
   copySubjectBtn.addEventListener("click", function () {
