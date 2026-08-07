@@ -42,23 +42,60 @@
     return url;
   }
 
+  // Shows only the first 4 characters + a length count — enough to catch
+  // a copy-paste mismatch (wrong key entirely, truncated key, stray
+  // leading/trailing whitespace changing the length) against the API_KEY
+  // script property, without printing the full key to the console.
+  function maskKey(key) {
+    if (!key) return "(empty)";
+    return JSON.stringify(key.slice(0, 4)) + "... (" + key.length + " chars total)";
+  }
+
   // Resolves to the parsed JSON body on any reachable HTTP 200 response
   // (even one representing a logical "not found"/error from the script);
-  // rejects only on real transport failure — network error, timeout,
-  // non-2xx status, or a body that isn't valid JSON.
+  // rejects on real transport failure — network error, timeout, non-2xx
+  // status, or a body that isn't valid JSON. Every call logs its request
+  // (action + masked key) and the full raw response (HTTP status + raw
+  // body text) to the console, specifically so a backend failure that
+  // would otherwise be swallowed into "just show the fallback warning"
+  // is visible and diagnosable — including the case Apps Script Web Apps
+  // are notorious for: HTTP 200 with a JSON `{"error": "..."}` body,
+  // which reads as a technical success but is a logical failure. That
+  // check happens per-action below (registerClient/saveIntake always
+  // treat a `.error` field as failure; read actions may legitimately
+  // return `.error` to mean "no such record", not "something's broken" —
+  // either way it's logged here so it's visible regardless.
   function call(params) {
     var url = buildUrl(params);
     var hasAbort = typeof AbortController !== "undefined";
     var controller = hasAbort ? new AbortController() : null;
     var timer = hasAbort ? setTimeout(function () { controller.abort(); }, TIMEOUT_MS) : null;
+
+    console.log("[ApoComm.Backend] → " + params.action, "key=" + maskKey(ApoComm.CONFIG.API_KEY), "params=", params);
+
     return fetch(url, controller ? { signal: controller.signal } : {})
       .then(function (res) {
         if (timer) clearTimeout(timer);
-        if (!res.ok) throw new Error("Backend responded with HTTP " + res.status);
-        return res.json();
+        return res.text().then(function (text) {
+          console.log("[ApoComm.Backend] ← " + params.action, "HTTP " + res.status, "raw response:", text);
+          if (!res.ok) throw new Error("Backend responded with HTTP " + res.status + ": " + text);
+          var json = null;
+          if (text) {
+            try {
+              json = JSON.parse(text);
+            } catch (parseErr) {
+              throw new Error("Backend response was not valid JSON (" + parseErr.message + "): " + text.slice(0, 300));
+            }
+          }
+          if (json && typeof json === "object" && json.error) {
+            console.warn("[ApoComm.Backend] " + params.action, "response body contains an error field:", json.error);
+          }
+          return json;
+        });
       })
       .catch(function (err) {
         if (timer) clearTimeout(timer);
+        console.error("[ApoComm.Backend] " + params.action, "call failed:", err.message);
         throw err;
       });
   }
@@ -158,11 +195,14 @@
   Backend.registerClient = function (regFields) {
     var placeholderRow = ApoComm.regFieldsToBackendRow(Object.assign({}, regFields, { ClientID: "" }));
     return call({ action: "registerClient", data: JSON.stringify(placeholderRow) }).then(function (json) {
-      if (json && typeof json === "object" && !Array.isArray(json) && (json.error || json.success === false)) {
-        throw new Error(json.error || "Backend reported failure");
+      // A write action has no legitimate "not found" reading of `.error`
+      // the way a lookup does — any error field here is a real failure,
+      // full stop, regardless of the (still HTTP 200) response status.
+      if (json && typeof json === "object" && (json.error || json.success === false)) {
+        throw new Error(json.error || "Backend reported failure (success: false)");
       }
       var clientId = extractClientId(json);
-      if (!clientId) throw new Error("Backend did not return an assigned ClientID");
+      if (!clientId) throw new Error("Backend did not return an assigned ClientID — raw response logged above");
       return { ok: true, clientId: clientId };
     }).catch(function (err) {
       return { ok: false, error: err.message, clientId: null };
