@@ -13,12 +13,12 @@
     <p class="subtitle">Paste one 36-column TSV row (same format the registration app produces) to generate a single-page site.</p>
   </header>
 
-  <div class="field">
-    <label for="client-select">Load saved client</label>
-    <select id="client-select">
-      <option value="">-- Paste manually, or pick a saved client --</option>
-    </select>
-    <p class="hint">Saved locally in this browser by the registration tool. No data is shared between devices or people.</p>
+  <div class="field client-lookup">
+    <label for="client-search">Load saved client</label>
+    <input type="text" id="client-search" autocomplete="off" placeholder="Type a first or last name to search...">
+    <ul id="client-results" class="client-results" role="listbox" hidden></ul>
+    <p class="hint">Searches the shared client database. No match? Paste the registration TSV row directly below instead.</p>
+    <p id="backend-warning" class="backend-warning" hidden></p>
   </div>
 
   <div class="field">
@@ -54,6 +54,9 @@
   </section>
 </div>
 
+<script src="../../shared/apocomm-config.js"></script>
+<script src="../../shared/apocomm-common.js"></script>
+<script src="../../shared/apocomm-backend.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -14,7 +14,9 @@
   ];
 
   var tsvInput = document.getElementById("tsv-input");
-  var clientSelect = document.getElementById("client-select");
+  var clientSearch = document.getElementById("client-search");
+  var clientResults = document.getElementById("client-results");
+  var backendWarning = document.getElementById("backend-warning");
   var parseError = document.getElementById("parse-error");
   var generateBtn = document.getElementById("generate-btn");
   var blockedMessage = document.getElementById("blocked-message");
@@ -30,39 +32,102 @@
   var currentHtml = "";
   var currentFileName = "index.html";
 
-  // ---- shared client storage (same convention across all 4 tools) ----
+  // ---- shared client lookup (backend-first, same convention across all
+  // 4 tools) — searchByName against the shared backend first; falls back
+  // to the localStorage cache only if that call fails or returns nothing.
+  // Once a result is selected, the full row is re-fetched via getClient
+  // rather than trusting whatever the search step returned. ------------
 
-  function listSavedClientIds() {
-    var ids = [];
-    for (var i = 0; i < localStorage.length; i++) {
-      var key = localStorage.key(i);
-      var m = /^apocomm_client_(.+)$/.exec(key);
-      if (m && !/_intake_\d{4}-\d{2}$/.test(m[1])) ids.push(m[1]);
+  function showBackendWarning(warning) {
+    if (warning) {
+      backendWarning.textContent = warning;
+      backendWarning.hidden = false;
+    } else {
+      backendWarning.hidden = true;
     }
-    return ids.sort();
   }
 
-  function populateClientSelect() {
-    var current = clientSelect.value;
-    while (clientSelect.options.length > 1) clientSelect.remove(1);
-    listSavedClientIds().forEach(function (id) {
-      var opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = id;
-      clientSelect.appendChild(opt);
+  var clientMap = {};
+  var activeResultIndex = -1;
+  var searchToken = 0;
+
+  function renderClientResults(query) {
+    var token = ++searchToken;
+    clientResults.innerHTML = '<li class="client-results-empty">Searching…</li>';
+    clientResults.hidden = false;
+
+    ApoComm.searchClients(query).then(function (result) {
+      if (token !== searchToken) return; // a newer search superseded this one
+
+      showBackendWarning(result.warning);
+
+      clientMap = {};
+      result.clients.forEach(function (c) { clientMap[c.clientId] = c; });
+
+      activeResultIndex = -1;
+      clientResults.innerHTML = "";
+
+      if (result.clients.length === 0) {
+        var msg = query.trim()
+          ? "No match — paste the registration TSV row below instead."
+          : "No saved clients yet — paste the registration TSV row below instead.";
+        clientResults.innerHTML = '<li class="client-results-empty">' + msg + "</li>";
+        clientResults.hidden = false;
+        return;
+      }
+      result.clients.forEach(function (c) {
+        var li = document.createElement("li");
+        li.textContent = c.label;
+        li.setAttribute("role", "option");
+        li.dataset.clientId = c.clientId;
+        clientResults.appendChild(li);
+      });
+      clientResults.hidden = false;
     });
-    if (Array.prototype.some.call(clientSelect.options, function (o) { return o.value === current; })) {
-      clientSelect.value = current;
-    }
   }
 
-  clientSelect.addEventListener("change", function () {
-    if (!clientSelect.value) return;
-    var saved = localStorage.getItem("apocomm_client_" + clientSelect.value);
-    if (saved) tsvInput.value = saved;
+  function selectClient(clientId) {
+    var client = clientMap[clientId];
+    if (!client) return;
+    clientSearch.value = client.label;
+    clientResults.hidden = true;
+    ApoComm.fetchClientRow(clientId).then(function (result) {
+      showBackendWarning(result.warning);
+      tsvInput.value = result.fields ? ApoComm.regFieldsToBackendRow(result.fields).join("\t") : client.raw;
+    });
+  }
+
+  clientSearch.addEventListener("focus", function () { renderClientResults(clientSearch.value); });
+  clientSearch.addEventListener("input", function () { renderClientResults(clientSearch.value); });
+
+  clientSearch.addEventListener("keydown", function (e) {
+    var options = clientResults.querySelectorAll("li[data-client-id]");
+    if (e.key === "Escape") {
+      clientResults.hidden = true;
+    } else if (e.key === "ArrowDown" && options.length) {
+      e.preventDefault();
+      activeResultIndex = Math.min(activeResultIndex + 1, options.length - 1);
+      options.forEach(function (o, i) { o.classList.toggle("is-active", i === activeResultIndex); });
+    } else if (e.key === "ArrowUp" && options.length) {
+      e.preventDefault();
+      activeResultIndex = Math.max(activeResultIndex - 1, 0);
+      options.forEach(function (o, i) { o.classList.toggle("is-active", i === activeResultIndex); });
+    } else if (e.key === "Enter" && activeResultIndex >= 0 && options[activeResultIndex]) {
+      e.preventDefault();
+      selectClient(options[activeResultIndex].dataset.clientId);
+    }
   });
 
-  populateClientSelect();
+  // mousedown (not click) fires before the input's blur hides the list.
+  clientResults.addEventListener("mousedown", function (e) {
+    var li = e.target.closest("li[data-client-id]");
+    if (!li) return;
+    selectClient(li.dataset.clientId);
+  });
+
+  clientSearch.addEventListener("blur", function () {
+    setTimeout(function () { clientResults.hidden = true; }, 150);
+  });
 
   function parseRow(raw) {
     var lines = raw.split(/\r?\n/);

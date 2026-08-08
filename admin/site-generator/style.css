@@ -10,6 +10,9 @@
   --danger-bg: #fdecea;
   --ok-bg: #eef6ef;
   --ok-line: #bfe0c4;
+  --warn: #8a5a00;
+  --warn-bg: #fff6e0;
+  --warn-line: #f0d68a;
   --radius: 8px;
 }
 
@@ -78,6 +81,70 @@ select:focus {
   margin: 0.35rem 0 0;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+.backend-warning {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.client-lookup {
+  position: relative;
+}
+
+#client-search {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+#client-search:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.client-results {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0.2rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.client-results li {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.client-results li:hover,
+.client-results li.is-active {
+  background: var(--bg);
+}
+
+.client-results li.client-results-empty {
+  color: var(--muted);
+  cursor: default;
+}
+
+.client-results li.client-results-empty:hover {
+  background: none;
 }
 
 .error {

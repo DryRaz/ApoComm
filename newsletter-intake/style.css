@@ -7,6 +7,15 @@
   --accent: #2b5fa8;
   --accent-dark: #1f4784;
   --danger: #b3261e;
+  --danger-bg: #fdecea;
+  --ok-bg: #eef6ef;
+  --ok-line: #bfe0c4;
+  --warn: #8a5a00;
+  --topic-highlights: #2b5fa8;
+  --topic-prayer: #7a4fa3;
+  --topic-looking_ahead: #b5680d;
+  --topic-numbers: #1f8a5f;
+  --topic-meetings: #1f8a5f;
   --radius: 8px;
 }
 
@@ -64,6 +73,13 @@ input:focus, select:focus, textarea:focus {
   color: var(--muted);
 }
 
+.backend-warning {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--warn);
+  font-weight: 600;
+}
+
 .error {
   margin: 0.3rem 0 0;
   font-size: 0.85rem;
@@ -111,4 +127,179 @@ button:hover { background: var(--accent-dark); }
   font-size: 0.85rem;
   white-space: pre;
   overflow-x: auto;
+}
+
+/* Client search lookup (shared pattern with the admin tools) */
+
+.client-lookup { position: relative; }
+
+.client-results {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0.2rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.client-results li {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.client-results li:hover,
+.client-results li.is-active {
+  background: var(--bg);
+}
+
+.client-results li.client-results-empty {
+  color: var(--muted);
+  cursor: default;
+}
+
+.client-results li.client-results-empty:hover { background: none; }
+
+/* Security gate / blocked messages */
+
+.blocked-banner {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  font-weight: 600;
+  margin: 1.5rem 0;
+}
+
+.security-decision {
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.security-decision .row { margin-bottom: 0.2rem; }
+.security-decision strong { display: inline-block; min-width: 10rem; }
+
+/* Automated results screen */
+
+.results-screen {
+  max-width: 900px;
+  margin: 2rem auto 0;
+}
+
+.results-screen > h2 { font-size: 1.25rem; }
+
+.output-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.output-block h3 { margin-top: 0; font-size: 1.1rem; }
+
+.output-block button {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+#newsletter-body-output,
+#instagram-output {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+/* Calendar view (mirrors admin/instagram-calendar) */
+
+.calendar-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.week-block h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+  color: var(--accent-dark);
+}
+
+.post-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.post-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.85rem;
+  background: #fff;
+}
+
+.post-card .meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.post-card .topic-tag {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.topic-tag.highlights { background: var(--topic-highlights); }
+.topic-tag.prayer { background: var(--topic-prayer); }
+.topic-tag.looking_ahead { background: var(--topic-looking_ahead); }
+.topic-tag.numbers { background: var(--topic-numbers); }
+.topic-tag.meetings { background: var(--topic-meetings); }
+
+.post-card .format-tag { color: var(--muted); }
+
+.post-card .caption {
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  margin-bottom: 0.5rem;
+}
+
+.post-card .hashtags {
+  font-size: 0.78rem;
+  color: var(--accent-dark);
+  margin-bottom: 0.4rem;
+}
+
+.post-card .graphic-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.exhaustion-note {
+  background: #fff6e0;
+  border: 1px solid #f0d68a;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  color: #8a5a00;
+  margin-top: 0.5rem;
 }

@@ -9,18 +9,7 @@
   var copyBtn = document.getElementById("copy-btn");
   var copyStatus = document.getElementById("copy-status");
   var saveStatus = document.getElementById("save-status");
-
-  // Shared localStorage key convention across all 4 tools (same GitHub
-  // Pages origin, so this works with no backend). Local to this browser
-  // only — never synced between devices or people.
-  function saveClientRow(clientId, tsvRow) {
-    try {
-      localStorage.setItem("apocomm_client_" + clientId, tsvRow);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  var submitBtn = form.querySelector('button[type="submit"]');
 
   // Single-value required fields (block submission if empty).
   var REQUIRED_TEXT_FIELDS = [
@@ -50,17 +39,7 @@
     "for discretion", "no photos please", "anonymous"
   ];
 
-  var TSV_COLUMNS = [
-    "ClientID", "OnboardingStatus", "CreationDate", "LastName", "FirstName",
-    "Email", "WhatsAppPhone", "PrimaryLanguage", "Timezone",
-    "SendingOrganization", "CountryOfService", "CityOfService", "MinistryType",
-    "DepartureDate", "CommitmentDuration", "MissionSummary", "SecuritySensitive",
-    "SecurityInstructions", "CurrentPartnersCount", "AudienceSegments",
-    "ExistingEmailList", "MainObjective", "RequestedServices", "Channels",
-    "DesiredFrequency", "DesiredTone", "ExistingWritingLink", "PhotosLink",
-    "PackageOffer", "MonthlyBudget", "ContractStartDate", "ApostelloManager",
-    "NextAction", "NextFollowUpDate", "FollowUpCount", "Notes"
-  ];
+  var TSV_COLUMNS = ApoComm.REG_COLUMNS;
 
   function sanitize(value) {
     return String(value == null ? "" : value).replace(/[\t\r\n]+/g, " ").trim();
@@ -73,12 +52,20 @@
     return d.getFullYear() + "-" + m + "-" + day;
   }
 
+  // Offline-only fallback: the backend allocates the real ClientID on a
+  // successful registerClient call (see apocomm-backend.js) — this local
+  // counter is used ONLY when that call fails outright, so the row still
+  // has something to be saved locally under rather than being lost. Two
+  // browsers registering offline in the same year could in principle
+  // generate the same fallback ID before either syncs; that's an accepted
+  // limitation of a purely local counter, not something to design around
+  // here, since it only ever applies to the already-degraded offline path.
   function nextClientId() {
     var year = new Date().getFullYear();
     // Deliberately NOT prefixed "apocomm_client_" — that prefix is reserved
-    // for saved client TSV rows (see saveClientRow()) and is scanned by
-    // the other tools' "load saved client" dropdowns; this internal
-    // counter must never appear in that list.
+    // for saved client TSV rows (see ApoComm.cacheClientRow()) and is
+    // scanned by the other tools' "load saved client" dropdowns; this
+    // internal counter must never appear in that list.
     var key = "apocomm_seq_" + year;
     var seq = parseInt(localStorage.getItem(key) || "0", 10) + 1;
     localStorage.setItem(key, String(seq));
@@ -151,7 +138,10 @@
     var securitySensitive = analyzeSecurity(missionSummary) ? "YES" : "NO";
 
     var values = {
-      ClientID: nextClientId(),
+      // Placeholder — the backend assigns the real ClientID on submit
+      // (see the submit handler below); left blank rather than guessed
+      // here so nothing downstream mistakes this for a real ID.
+      ClientID: "",
       OnboardingStatus: "New",
       CreationDate: todayISO(),
       LastName: sanitize(form.elements.LastName.value),
@@ -214,6 +204,9 @@
   form.addEventListener("submit", function (event) {
     event.preventDefault();
 
+    // TEMP DEBUG - remove after diagnosing
+    alert("1. Submit button was clicked");
+
     if (!validate()) {
       var firstError = form.querySelector(".field.has-error input, .field.has-error select, .field.has-error textarea, .field.has-error");
       if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -227,18 +220,36 @@
     securityBanner.hidden = values.SecuritySensitive !== "YES";
     completionLine.textContent = "Required-field completion: " + stats.percent + "% (" +
       stats.filled + "/" + stats.total + " tracked fields).";
-    var row = toTsvRow(values);
-    tsvOutput.value = row;
     copyStatus.textContent = "";
+    tsvOutput.value = "";
 
-    if (saveClientRow(values.ClientID, row)) {
-      saveStatus.textContent = "Saved locally as " + values.ClientID + " — available to the other tools on this browser.";
-    } else {
-      saveStatus.textContent = "";
-    }
-
+    saveStatus.classList.remove("warning");
+    saveStatus.textContent = "Saving…";
+    submitBtn.disabled = true;
     resultSection.hidden = false;
     resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // ClientID isn't known yet — `values.ClientID` is still the blank
+    // placeholder from buildRow(). The backend assigns the real one; only
+    // once that comes back (or the call fails, in which case a purely
+    // local fallback ID is generated) do we know what to display/save
+    // under, so the TSV output is filled in below, not above.
+    ApoComm.registerClientRemote(values).then(function (result) {
+      if (result.ok) {
+        values.ClientID = result.clientId;
+        tsvOutput.value = toTsvRow(values);
+        saveStatus.classList.remove("warning");
+        saveStatus.textContent = "Saved as " + values.ClientID + " to the shared database — available to the other tools everywhere.";
+      } else {
+        values.ClientID = nextClientId();
+        ApoComm.cacheClientRow(values);
+        tsvOutput.value = toTsvRow(values);
+        saveStatus.classList.add("warning");
+        saveStatus.textContent = "Could not reach the shared database — saved locally only on this browser as " +
+          values.ClientID + ". It will need to be synced manually until the connection is available again.";
+      }
+      submitBtn.disabled = false;
+    });
   });
 
   copyBtn.addEventListener("click", function () {
