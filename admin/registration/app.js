@@ -204,9 +204,6 @@
   form.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    // TEMP DEBUG - remove after diagnosing
-    alert("1. Submit button was clicked");
-
     if (!validate()) {
       var firstError = form.querySelector(".field.has-error input, .field.has-error select, .field.has-error textarea, .field.has-error");
       if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
