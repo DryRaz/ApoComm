@@ -73,6 +73,11 @@
 
     console.log("[ApoComm.Backend] → " + params.action, "key=" + maskKey(ApoComm.CONFIG.API_KEY), "params=", params);
 
+    if (params.action === "registerClient") {
+      // TEMP DEBUG - remove after diagnosing
+      alert("2. About to call backend at: " + url);
+    }
+
     return fetch(url, controller ? { signal: controller.signal } : {})
       .then(function (res) {
         if (timer) clearTimeout(timer);
@@ -195,6 +200,8 @@
   Backend.registerClient = function (regFields) {
     var placeholderRow = ApoComm.regFieldsToBackendRow(Object.assign({}, regFields, { ClientID: "" }));
     return call({ action: "registerClient", data: JSON.stringify(placeholderRow) }).then(function (json) {
+      // TEMP DEBUG - remove after diagnosing
+      alert("3. Backend responded: " + JSON.stringify(json));
       // A write action has no legitimate "not found" reading of `.error`
       // the way a lookup does — any error field here is a real failure,
       // full stop, regardless of the (still HTTP 200) response status.
@@ -205,6 +212,8 @@
       if (!clientId) throw new Error("Backend did not return an assigned ClientID — raw response logged above");
       return { ok: true, clientId: clientId };
     }).catch(function (err) {
+      // TEMP DEBUG - remove after diagnosing
+      alert("4. Backend call failed: " + err.message);
       return { ok: false, error: err.message, clientId: null };
     });
   };
