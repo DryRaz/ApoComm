@@ -11,6 +11,38 @@
   var saveStatus = document.getElementById("save-status");
   var submitBtn = form.querySelector('button[type="submit"]');
 
+  // ---- step wizard (interface only — the 36 fields, REQUIRED_TEXT_FIELDS,
+  // REQUIRED_GROUP_FIELDS, validate(), buildRow(), analyzeSecurity(), and
+  // the submit handler's backend/ID logic below are all unchanged; this
+  // section only adds pagination on top of the same single <form>) -------
+
+  var backBtn = document.getElementById("back-btn");
+  var nextBtn = document.getElementById("next-btn");
+  var stepEls = Array.prototype.slice.call(form.querySelectorAll(".step"));
+  var indicatorItems = Array.prototype.slice.call(document.querySelectorAll(".step-indicator-item"));
+  var stepPositionEl = document.getElementById("step-position");
+  var stepCurrentNameEl = document.getElementById("step-current-name");
+  var progressTrack = document.getElementById("progress-track");
+  var progressFill = document.getElementById("progress-fill");
+  var progressLabel = document.getElementById("progress-label");
+
+  var STEP_NAMES = ["Identity", "Mission", "Audience", "Needs", "Content", "Admin"];
+
+  // Which of REQUIRED_TEXT_FIELDS / REQUIRED_GROUP_FIELDS belong to each
+  // step, used only to gate the "Continue" button — the authoritative,
+  // unchanged full-form check still runs in validate() at final submit.
+  var STEP_REQUIRED_TEXT = [
+    ["LastName", "FirstName", "Email", "PrimaryLanguage"],
+    ["SendingOrganization", "CountryOfService", "MinistryType", "DepartureDate", "MissionSummary"],
+    ["CurrentPartnersCount"],
+    ["MainObjective", "DesiredFrequency"],
+    [],
+    ["PackageOffer", "ContractStartDate"]
+  ];
+  var STEP_REQUIRED_GROUPS = [[], [], [], ["RequestedServices", "Channels"], [], []];
+
+  var currentStep = 0;
+
   // Single-value required fields (block submission if empty).
   var REQUIRED_TEXT_FIELDS = [
     "LastName", "FirstName", "Email", "PrimaryLanguage", "SendingOrganization",
@@ -133,6 +165,138 @@
     return valid;
   }
 
+  // Same shape as validate() above but scoped to one step's fields, so
+  // "Continue" only checks what's actually on screen. Uses the exact same
+  // setError()/getCheckedValues()/sanitize() helpers and the exact same
+  // required-field lists (just filtered to this step) — no separate
+  // validation logic, no separate error copy.
+  function validateStep(stepIndex) {
+    clearErrors();
+    var valid = true;
+
+    STEP_REQUIRED_TEXT[stepIndex].forEach(function (name) {
+      var el = form.elements[name];
+      if (!el || !sanitize(el.value)) {
+        setError(name, "This field is required.");
+        valid = false;
+      }
+    });
+
+    if (STEP_REQUIRED_TEXT[stepIndex].indexOf("Email") !== -1) {
+      var emailEl = form.elements.Email;
+      if (emailEl && sanitize(emailEl.value) && !emailEl.checkValidity()) {
+        setError("Email", "Enter a valid email address.");
+        valid = false;
+      }
+    }
+
+    STEP_REQUIRED_GROUPS[stepIndex].forEach(function (name) {
+      if (getCheckedValues(name).length === 0) {
+        setError(name, "Select at least one option.");
+        valid = false;
+      }
+    });
+
+    return valid;
+  }
+
+  // Finds which step a given field name lives on, so a final-submit
+  // validation failure (validate() covers every field, not just the
+  // current step) can bring the right step into view before scrolling —
+  // this only reacts to validate()'s existing true/false result, it
+  // doesn't change what validate() checks.
+  function stepIndexForField(name) {
+    for (var i = 0; i < STEP_REQUIRED_TEXT.length; i++) {
+      if (STEP_REQUIRED_TEXT[i].indexOf(name) !== -1) return i;
+    }
+    for (var j = 0; j < STEP_REQUIRED_GROUPS.length; j++) {
+      if (STEP_REQUIRED_GROUPS[j].indexOf(name) !== -1) return j;
+    }
+    return -1;
+  }
+
+  function updateIndicator() {
+    indicatorItems.forEach(function (item, i) {
+      item.classList.toggle("is-current", i === currentStep);
+      item.classList.toggle("is-complete", i < currentStep);
+    });
+    stepPositionEl.textContent = "Step " + (currentStep + 1) + " of " + STEP_NAMES.length;
+    stepCurrentNameEl.textContent = STEP_NAMES[currentStep];
+  }
+
+  // Live completion preview: reuses buildRow()/completionStats() exactly
+  // as the result screen does — just called more often, on every input,
+  // rather than only once at submit. No new completion logic.
+  function updateProgress() {
+    var values = buildRow();
+    var stats = completionStats(values);
+    progressFill.style.width = stats.percent + "%";
+    progressLabel.textContent = stats.percent + "% complete";
+    progressTrack.setAttribute("aria-valuenow", String(stats.percent));
+  }
+
+  function renderStep() {
+    stepEls.forEach(function (el, i) {
+      el.hidden = i !== currentStep;
+    });
+    backBtn.hidden = currentStep === 0;
+    nextBtn.hidden = currentStep === STEP_NAMES.length - 1;
+    submitBtn.hidden = currentStep !== STEP_NAMES.length - 1;
+    updateIndicator();
+    updateProgress();
+  }
+
+  function goToStep(index) {
+    currentStep = Math.max(0, Math.min(STEP_NAMES.length - 1, index));
+    renderStep();
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  nextBtn.addEventListener("click", function () {
+    if (!validateStep(currentStep)) {
+      var firstError = stepEls[currentStep].querySelector(".field.has-error input, .field.has-error select, .field.has-error textarea");
+      if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    clearErrors();
+    goToStep(currentStep + 1);
+  });
+
+  backBtn.addEventListener("click", function () {
+    clearErrors();
+    goToStep(currentStep - 1);
+  });
+
+  // Enter inside a text-like input would otherwise implicitly submit the
+  // whole form (the browser looks for the first submit button in the
+  // form regardless of which step is visible) — redirect it to whatever
+  // this step's forward action is instead. Textareas keep Enter as a
+  // normal newline.
+  form.addEventListener("keydown", function (event) {
+    if (event.key !== "Enter" || event.target.tagName === "TEXTAREA") return;
+    if (currentStep === STEP_NAMES.length - 1) return; // let the real submit button handle it
+    event.preventDefault();
+    nextBtn.click();
+  });
+
+  // Clears a field's error as soon as its value changes, rather than
+  // leaving a stale error message/highlight visible until the next
+  // "Continue" click — pure UI responsiveness, doesn't change what
+  // validateStep()/validate() consider valid.
+  function clearFieldErrorOnEdit(event) {
+    var fieldWrap = event.target.closest(".field");
+    if (fieldWrap && fieldWrap.classList.contains("has-error")) {
+      fieldWrap.classList.remove("has-error");
+      var errorEl = fieldWrap.querySelector(".error");
+      if (errorEl) errorEl.textContent = "";
+    }
+  }
+
+  form.addEventListener("input", clearFieldErrorOnEdit);
+  form.addEventListener("change", clearFieldErrorOnEdit);
+  form.addEventListener("input", updateProgress);
+  form.addEventListener("change", updateProgress);
+
   function buildRow() {
     var missionSummary = sanitize(form.elements.MissionSummary.value);
     var securitySensitive = analyzeSecurity(missionSummary) ? "YES" : "NO";
@@ -205,8 +369,21 @@
     event.preventDefault();
 
     if (!validate()) {
-      var firstError = form.querySelector(".field.has-error input, .field.has-error select, .field.has-error textarea, .field.has-error");
-      if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      // validate() itself is unchanged and checks every field regardless
+      // of which step is showing — if the first problem it found is on an
+      // earlier step (shouldn't normally happen, since "Continue" already
+      // gates each step, but covers e.g. browser back/forward), bring
+      // that step into view before scrolling to the field.
+      var firstError = form.querySelector(".field.has-error input, .field.has-error select, .field.has-error textarea");
+      if (firstError) {
+        var errorStep = stepIndexForField(firstError.name);
+        if (errorStep !== -1 && errorStep !== currentStep) {
+          currentStep = errorStep;
+          renderStep();
+        }
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstError.focus({ preventScroll: true });
+      }
       resultSection.hidden = true;
       return;
     }
@@ -257,4 +434,6 @@
       copyStatus.textContent = "Copy failed — select the text and copy manually.";
     });
   });
+
+  renderStep();
 })();
