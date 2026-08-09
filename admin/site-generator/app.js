@@ -183,7 +183,7 @@
     if (!instructions) {
       return {
         blocked: true,
-        reason: "Cannot generate — this profile requires human security validation first."
+        reason: "We can't generate this site quite yet. Because of what's on this profile, a team member needs to take a quick, careful look first — this keeps the missionary safe, and won't take long. Check back once that review is done."
       };
     }
 

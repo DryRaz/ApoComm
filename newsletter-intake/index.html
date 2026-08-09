@@ -4,87 +4,109 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apostello Comm — Monthly Newsletter Intake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="page">
   <header class="page-header">
-    <h1>Monthly newsletter intake</h1>
-    <p class="subtitle">A quick check-in each month to feed your newsletter and social content. Add as much or as little as actually happened — there's no fixed number of entries.</p>
+    <p class="eyebrow">Apostello Comm</p>
+    <h1>How was your month?</h1>
+    <p class="subtitle">A quick check-in to feed your newsletter and social content. Add as much or as little as actually happened — there's no fixed number of entries.</p>
   </header>
 
   <form id="intake-form" novalidate>
-    <div class="field client-lookup">
-      <label for="client-search">Find your name</label>
-      <input type="text" id="client-search" autocomplete="off" placeholder="Type your first or last name to search...">
-      <ul id="client-results" class="client-results" role="listbox" hidden></ul>
-      <p class="hint">Selecting your name fills in your Client ID below automatically.</p>
-      <p id="backend-warning" class="backend-warning" hidden></p>
-    </div>
+    <section class="panel">
+      <div class="field client-lookup">
+        <label for="client-search">Find your name</label>
+        <input type="text" id="client-search" autocomplete="off" placeholder="Type your first or last name to search...">
+        <ul id="client-results" class="client-results" role="listbox" hidden></ul>
+        <p class="hint">Selecting your name fills in your Client ID below automatically.</p>
+        <p id="backend-warning" class="backend-warning" hidden></p>
+      </div>
 
-    <div class="field">
-      <label for="ClientID">Your Client ID <span class="req">*</span></label>
-      <input type="text" id="ClientID" name="ClientID" placeholder="e.g. APC-2026-001" required>
-      <p class="hint">Find this on your registration confirmation, or search for your name above.</p>
-      <p class="error" data-error-for="ClientID"></p>
-    </div>
+      <div class="field">
+        <label for="ClientID">Your Client ID <span class="tag-required">required</span></label>
+        <input type="text" id="ClientID" name="ClientID" placeholder="e.g. APC-2026-001" required>
+        <p class="hint">Find this on your registration confirmation, or search for your name above.</p>
+        <p class="error" data-error-for="ClientID"></p>
+      </div>
+    </section>
 
-    <div class="field">
-      <label for="IsFirstNewsletter">Is this your first newsletter? <span class="req">*</span></label>
-      <select id="IsFirstNewsletter" name="IsFirstNewsletter" required>
-        <option value="" disabled selected>Select an answer</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-      </select>
-      <p class="error" data-error-for="IsFirstNewsletter"></p>
-    </div>
+    <fieldset class="panel">
+      <legend>This month</legend>
 
-    <div class="field">
-      <label for="Events">Events / notable moments this month <span class="req">*</span></label>
-      <textarea id="Events" name="Events" rows="4"
-        placeholder="One per line or separated by semicolons — as many as actually happened. e.g. Hosted our first youth night, 40 teens showed up; Baptized 6 new believers; Started a Bible study in a new neighborhood"></textarea>
-      <p class="hint">Separate multiple events with a semicolon (;). At least one is required.</p>
-      <p class="error" data-error-for="Events"></p>
-    </div>
+      <div class="field">
+        <label for="IsFirstNewsletter">Is this your very first update to us? <span class="tag-required">required</span></label>
+        <select id="IsFirstNewsletter" name="IsFirstNewsletter" required>
+          <option value="" disabled selected>Select an answer</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+        <p class="error" data-error-for="IsFirstNewsletter"></p>
+      </div>
 
-    <div class="field">
-      <label for="MeetingsSummary">Meetings / activity rollup</label>
-      <textarea id="MeetingsSummary" name="MeetingsSummary" rows="2"
-        placeholder="Optional — a general rollup, not itemized. e.g. Led about 20 discipleship meetings this month."></textarea>
-    </div>
+      <div class="field">
+        <label for="Events">What happened this month that you'd want your supporters to know about? <span class="tag-required">required</span></label>
+        <textarea id="Events" name="Events" rows="4"
+          placeholder="One per line or separated by semicolons — as many as actually happened. e.g. Hosted our first youth night, 40 teens showed up; Baptized 6 new believers; Started a Bible study in a new neighborhood"></textarea>
+        <p class="hint">Separate multiple events with a semicolon (;). At least one is required.</p>
+        <p class="error" data-error-for="Events"></p>
+      </div>
 
-    <div class="field">
-      <label for="PrayerNeeds">Prayer needs</label>
-      <textarea id="PrayerNeeds" name="PrayerNeeds" rows="3"
-        placeholder="Optional — separate multiple needs with a semicolon (;). e.g. Wisdom as I build my core leadership team; Health for my youngest, who's been sick"></textarea>
-    </div>
+      <div class="field">
+        <label for="MeetingsSummary">Any meetings or regular activity worth mentioning as a rollup?</label>
+        <textarea id="MeetingsSummary" name="MeetingsSummary" rows="2"
+          placeholder="Optional — a general rollup, not itemized. e.g. Led about 20 discipleship meetings this month."></textarea>
+      </div>
+    </fieldset>
 
-    <div class="field">
-      <label for="UpcomingProjects">Upcoming projects</label>
-      <textarea id="UpcomingProjects" name="UpcomingProjects" rows="3"
-        placeholder="Optional — separate multiple items with a semicolon (;). e.g. Launching a second youth night location; Planning a baptism service next month"></textarea>
-    </div>
+    <fieldset class="panel">
+      <legend>Prayer</legend>
 
-    <div class="field">
-      <label for="NumbersUpdate">Numbers update</label>
-      <textarea id="NumbersUpdate" name="NumbersUpdate" rows="2"
-        placeholder="Optional — e.g. new partners, progress toward your objective."></textarea>
-    </div>
+      <div class="field">
+        <label for="PrayerNeeds">Is there anything you'd like people praying for?</label>
+        <textarea id="PrayerNeeds" name="PrayerNeeds" rows="3"
+          placeholder="Optional — separate multiple needs with a semicolon (;). e.g. Wisdom as I build my core leadership team; Health for my youngest, who's been sick"></textarea>
+      </div>
+    </fieldset>
 
-    <div class="field">
-      <label for="NewPhotoLinks">New photo links</label>
-      <input type="text" id="NewPhotoLinks" name="NewPhotoLinks" placeholder="Optional — links to photos for this issue.">
-    </div>
+    <fieldset class="panel">
+      <legend>Looking ahead</legend>
 
-    <div class="field">
-      <label for="AnythingToAvoid">Anything to avoid mentioning this month?</label>
-      <textarea id="AnythingToAvoid" name="AnythingToAvoid" rows="2"
-        placeholder="Optional — anything you do NOT want mentioned this month."></textarea>
-      <p class="hint">This is on top of your standing security instructions, not instead of them.</p>
-    </div>
+      <div class="field">
+        <label for="UpcomingProjects">What's coming up that we should help you prepare for?</label>
+        <textarea id="UpcomingProjects" name="UpcomingProjects" rows="3"
+          placeholder="Optional — separate multiple items with a semicolon (;). e.g. Launching a second youth night location; Planning a baptism service next month"></textarea>
+      </div>
+    </fieldset>
+
+    <fieldset class="panel">
+      <legend>Numbers &amp; extras</legend>
+
+      <div class="field">
+        <label for="NumbersUpdate">Any numbers worth sharing — new partners, progress toward your goal?</label>
+        <textarea id="NumbersUpdate" name="NumbersUpdate" rows="2"
+          placeholder="Optional — e.g. new partners, progress toward your objective."></textarea>
+      </div>
+
+      <div class="field">
+        <label for="NewPhotoLinks">Any new photos we should use this month?</label>
+        <input type="text" id="NewPhotoLinks" name="NewPhotoLinks" placeholder="Optional — links to photos for this issue.">
+      </div>
+
+      <div class="field">
+        <label for="AnythingToAvoid">Anything we should be careful not to mention this month?</label>
+        <textarea id="AnythingToAvoid" name="AnythingToAvoid" rows="2"
+          placeholder="Optional — anything you do NOT want mentioned this month."></textarea>
+        <p class="hint">This is on top of your standing security instructions, not instead of them.</p>
+      </div>
+    </fieldset>
 
     <div class="form-actions">
-      <button type="submit">Submit this month's update</button>
+      <button type="submit" class="btn-primary">Submit this month's update</button>
     </div>
   </form>
 
@@ -93,17 +115,25 @@
   <div id="blocked-message" class="blocked-banner" hidden></div>
 
   <section id="result" class="result" hidden>
-    <h2>Captured</h2>
-    <div class="field">
-      <label for="tsv-output">TSV row — for re-pasting into the standalone newsletter/Instagram tools later if needed (10 columns)</label>
-      <textarea id="tsv-output" readonly rows="3"></textarea>
-      <button type="button" id="copy-btn">Copy to clipboard</button>
-      <span id="copy-status" class="copy-status" aria-live="polite"></span>
-    </div>
+    <p class="eyebrow">Saved</p>
+    <h2>Got it, thank you</h2>
+    <details class="tsv-details">
+      <summary>Show raw data row (for re-pasting into the standalone tools later)</summary>
+      <div class="field">
+        <label for="tsv-output">TSV row — 10 columns</label>
+        <textarea id="tsv-output" readonly rows="3"></textarea>
+        <button type="button" id="copy-btn" class="btn-secondary">Copy to clipboard</button>
+        <span id="copy-status" class="copy-status" aria-live="polite"></span>
+      </div>
+    </details>
   </section>
 
   <section id="results-screen" class="results-screen" hidden>
-    <h2>Your newsletter and Instagram calendar, generated automatically</h2>
+    <header class="results-header">
+      <p class="eyebrow">Ready</p>
+      <h2>Your newsletter and Instagram calendar</h2>
+      <p class="result-intro">Generated automatically from what you just shared — no extra steps needed.</p>
+    </header>
 
     <section class="output-block">
       <h3>Newsletter</h3>
@@ -111,12 +141,12 @@
       <div class="field">
         <label for="newsletter-subject-output">Subject line</label>
         <input type="text" id="newsletter-subject-output" readonly>
-        <button type="button" id="copy-newsletter-subject-btn">Copy subject</button>
+        <button type="button" id="copy-newsletter-subject-btn" class="btn-secondary">Copy subject</button>
       </div>
       <div class="field">
         <label for="newsletter-body-output">Plain text body</label>
         <textarea id="newsletter-body-output" readonly rows="16"></textarea>
-        <button type="button" id="copy-newsletter-body-btn">Copy body</button>
+        <button type="button" id="copy-newsletter-body-btn" class="btn-secondary">Copy body</button>
         <span id="newsletter-action-status" class="copy-status" aria-live="polite"></span>
       </div>
     </section>
@@ -129,7 +159,7 @@
       <div class="field" id="instagram-output-field" hidden>
         <label for="instagram-output">Plain-text version (for copy/paste)</label>
         <textarea id="instagram-output" readonly rows="16"></textarea>
-        <button type="button" id="copy-instagram-btn">Copy plain text</button>
+        <button type="button" id="copy-instagram-btn" class="btn-secondary">Copy plain text</button>
         <span id="instagram-action-status" class="copy-status" aria-live="polite"></span>
       </div>
     </section>

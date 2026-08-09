@@ -299,7 +299,12 @@
       // even though each tool's allow-map has a different topic shape.
       var nlSecurity = ApoComm.Newsletter.evaluateSecurityGate(regFields);
       if (nlSecurity.blocked) {
-        blockedMessage.textContent = nlSecurity.reason;
+        // Same block, softer words — nlSecurity.reason (shared with the
+        // newsletter/Instagram tools, untouched) still drives the actual
+        // decision; this is just what's displayed here.
+        blockedMessage.textContent = "Thanks so much for sending this in. Because of what's on file for you, " +
+          "a team member needs to take a quick look before we can put this month's update together. " +
+          "Nothing you shared is lost — we'll be in touch, and you can check back anytime.";
         blockedMessage.hidden = false;
         blockedMessage.scrollIntoView({ behavior: "smooth", block: "center" });
         submitBtn.disabled = false;

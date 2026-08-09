@@ -4,53 +4,68 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apostello Comm — Missionary Site Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="page">
   <header class="page-header">
+    <p class="eyebrow">Apostello Comm</p>
     <h1>Missionary site generator</h1>
-    <p class="subtitle">Paste one 36-column TSV row (same format the registration app produces) to generate a single-page site.</p>
+    <p class="subtitle">Find a client by name, or paste their registration row directly, to generate their one-page public site.</p>
   </header>
 
-  <div class="field client-lookup">
-    <label for="client-search">Load saved client</label>
-    <input type="text" id="client-search" autocomplete="off" placeholder="Type a first or last name to search...">
-    <ul id="client-results" class="client-results" role="listbox" hidden></ul>
-    <p class="hint">Searches the shared client database. No match? Paste the registration TSV row directly below instead.</p>
-    <p id="backend-warning" class="backend-warning" hidden></p>
-  </div>
+  <section class="panel">
+    <div class="field client-lookup">
+      <label for="client-search">Find a client</label>
+      <input type="text" id="client-search" autocomplete="off" placeholder="Type a first or last name to search...">
+      <ul id="client-results" class="client-results" role="listbox" hidden></ul>
+      <p class="hint">Searches the shared client database. No match? Paste the registration row directly below instead.</p>
+      <p id="backend-warning" class="backend-warning" hidden></p>
+    </div>
 
-  <div class="field">
-    <label for="tsv-input">TSV row</label>
-    <textarea id="tsv-input" rows="6" spellcheck="false" placeholder="APC-2026-001&#9;New&#9;2026-08-06&#9;..."></textarea>
-    <p class="error" id="parse-error"></p>
-  </div>
+    <div class="field">
+      <label for="tsv-input">Registration row (36-column TSV)</label>
+      <textarea id="tsv-input" rows="6" spellcheck="false" placeholder="APC-2026-001&#9;New&#9;2026-08-06&#9;..."></textarea>
+      <p class="error" id="parse-error"></p>
+    </div>
 
-  <div class="form-actions">
-    <button type="button" id="generate-btn">Generate site</button>
-  </div>
+    <div class="form-actions">
+      <button type="button" id="generate-btn" class="btn-primary">Generate site</button>
+    </div>
+  </section>
 
   <div id="blocked-message" class="blocked-banner" hidden></div>
 
   <div id="security-decision" class="security-decision" hidden></div>
 
   <section id="success-panel" class="success-panel" hidden>
-    <h2>Preview</h2>
-    <iframe id="preview" title="Generated site preview"></iframe>
+    <p class="eyebrow">Ready</p>
+    <h2>Here's their site</h2>
+    <p class="result-intro">This is exactly what will appear publicly once the file is committed. Give it a look before handing it off.</p>
+
+    <div class="preview-frame">
+      <div class="preview-chrome"><span></span><span></span><span></span></div>
+      <iframe id="preview" title="Generated site preview"></iframe>
+    </div>
 
     <p id="save-path-instruction" class="save-path-instruction"></p>
 
-    <div class="field">
-      <label for="html-output">Generated HTML (single self-contained file)</label>
-      <textarea id="html-output" readonly rows="10"></textarea>
-    </div>
-
     <div class="output-actions">
-      <button type="button" id="copy-html-btn">Copy HTML</button>
-      <button type="button" id="download-btn">Download .html file</button>
+      <button type="button" id="copy-html-btn" class="btn-secondary">Copy HTML</button>
+      <button type="button" id="download-btn" class="btn-secondary">Download .html file</button>
       <span id="action-status" class="action-status" aria-live="polite"></span>
     </div>
+
+    <details class="html-details">
+      <summary>Show generated HTML (single self-contained file)</summary>
+      <div class="field">
+        <label for="html-output">Generated HTML</label>
+        <textarea id="html-output" readonly rows="10"></textarea>
+      </div>
+    </details>
   </section>
 </div>
 
