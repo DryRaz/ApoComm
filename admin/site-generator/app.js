@@ -302,6 +302,9 @@
       .replace(/(^-|-$)/g, "") || "missionary";
   }
 
+  // Bold full-width typographic statement rather than the earlier
+  // pin-icon line — same allow-gating as before, byte-for-byte: if
+  // neither field is permitted, the section is omitted entirely.
   function buildWhereSection(fields, security) {
     if (!security.allowCountry && !security.allowCity) return "";
     var parts = [];
@@ -309,29 +312,41 @@
     if (security.allowCountry && fields.CountryOfService) parts.push(escapeHtml(fields.CountryOfService));
     if (parts.length === 0) return "";
     return (
-      '<section class="section where">\n' +
-      '  <h2>Where I serve</h2>\n' +
-      '  <p class="location">\n' +
-      '    <svg class="pin" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">\n' +
-      '      <path d="M12 2C7.6 2 4 5.6 4 10c0 5.4 7 11.5 7.3 11.7a1 1 0 0 0 1.4 0C13 21.5 20 15.4 20 10c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/>\n' +
-      '    </svg>\n' +
-      "    I'm serving in " + parts.join(", ") + "\n" +
-      "  </p>\n" +
+      '<section class="statement">\n' +
+      '  <p class="statement-label">Where I Serve</p>\n' +
+      '  <h2 class="statement-text">' + parts.join(", ") + "</h2>\n" +
       "</section>"
     );
   }
 
-  function buildPhotoSection() {
+  // A placeholder div (unchanged convention from before — there's no photo
+  // hosting in this pipeline, so a human pastes in a real <img> later)
+  // preceded by an HTML comment marking exactly where. The grayscale
+  // treatment is applied via CSS to `.photo-slot img`, so whatever photo
+  // eventually goes here is grayscaled automatically, not by hand.
+  function photoSlotHtml(note) {
     return (
-      '<section class="section photos">\n' +
-      "  <h2>Photos</h2>\n" +
-      '  <div class="photo-grid">\n' +
-      "    <!-- PHOTO 1: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\"> -->\n" +
-      '    <div class="photo-slot"><span>Photo 1</span></div>\n' +
-      "    <!-- PHOTO 2: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\"> -->\n" +
-      '    <div class="photo-slot"><span>Photo 2</span></div>\n' +
-      "    <!-- PHOTO 3 (optional): replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\"> -->\n" +
-      '    <div class="photo-slot"><span>Photo 3</span></div>\n' +
+      "<!-- " + note + " -->\n" +
+      '<div class="photo-slot"><span>Photo</span></div>'
+    );
+  }
+
+  // Two more grayscale slots woven into the page as an asymmetric band
+  // (one larger + two smaller, stacked) rather than a separate uniform
+  // gallery grid — keeps the same split-screen visual rhythm as the rest
+  // of the page instead of reading like a bolted-on gallery.
+  function buildPhotoSection() {
+    var main = photoSlotHtml("PHOTO 3: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
+    var side1 = photoSlotHtml("PHOTO 4: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
+    var side2 = photoSlotHtml("PHOTO 5 (optional): replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
+    return (
+      '<section class="photo-band">\n' +
+      '  <div class="photo-band-main">\n' +
+      "    " + main.replace(/\n/g, "\n    ") + "\n" +
+      "  </div>\n" +
+      '  <div class="photo-band-side">\n' +
+      "    " + side1.replace(/\n/g, "\n    ") + "\n" +
+      "    " + side2.replace(/\n/g, "\n    ") + "\n" +
       "  </div>\n" +
       "</section>"
     );
@@ -339,6 +354,7 @@
 
   function buildSiteHtml(fields, security) {
     var fullName = (fields.FirstName + " " + fields.LastName).trim();
+    var firstName = fields.FirstName.trim();
     var title = escapeHtml(fullName) + " — Apostello Comm";
     var summaryFirstPerson = toFirstPerson(fields.MissionSummary, fields.FirstName, fields.LastName);
     var objectiveFirstPerson = toFirstPerson(fields.MainObjective, fields.FirstName, fields.LastName);
@@ -346,6 +362,54 @@
     var mailHref = "mailto:" + encodeURIComponent(fields.Email).replace(/%40/g, "@");
 
     var whereSection = buildWhereSection(fields, security);
+
+    var heroPhoto = photoSlotHtml("PHOTO 1 (hero, full-bleed): replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
+    var aboutPhoto = photoSlotHtml("PHOTO 2: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
+
+    // Slim bar overlaid directly on the hero photo (not a separate
+    // header element) — a small text mark plus the one contact CTA the
+    // whole page needs.
+    var heroSection =
+      '<header class="hero">\n' +
+      '  <div class="hero-photo">\n' +
+      "    " + heroPhoto.replace(/\n/g, "\n    ") + "\n" +
+      "  </div>\n" +
+      '  <div class="hero-top">\n' +
+      '    <span class="mark">Apostello Comm &times; ' + escapeHtml(firstName) + "&#39;s Site</span>\n" +
+      '    <a class="pill pill-solid" href="' + mailHref + '">Get in touch</a>\n' +
+      "  </div>\n" +
+      '  <div class="hero-content">\n' +
+      (fields.MinistryType ? '    <p class="eyebrow">' + escapeHtml(fields.MinistryType) + "</p>\n" : "") +
+      "    <h1>" + escapeHtml(fullName) + "</h1>\n" +
+      (hook ? '    <p class="hook">' + hook + "</p>\n" : "") +
+      "  </div>\n" +
+      "</header>";
+
+    // 50/50 split: grayscale photo one side, sage color block with the
+    // first-person mission summary on the other.
+    var aboutSection =
+      '<section class="split about">\n' +
+      '  <div class="split-photo">\n' +
+      "    " + aboutPhoto.replace(/\n/g, "\n    ") + "\n" +
+      "  </div>\n" +
+      '  <div class="split-block sage">\n' +
+      "    <h2>About Me</h2>\n" +
+      "    <p>" + escapeHtml(summaryFirstPerson) + "</p>\n" +
+      (fields.SendingOrganization
+        ? '    <p class="sent-by">Sent by ' + escapeHtml(fields.SendingOrganization) + "</p>\n"
+        : "") +
+      "  </div>\n" +
+      "</section>";
+
+    // Closing coral color-block: MainObjective itself is the headline
+    // (not buried under a generic label), one pill CTA, mailto — never
+    // raw visible email text.
+    var ctaSection =
+      '<section class="cta-section">\n' +
+      '  <p class="cta-label">Get Involved</p>\n' +
+      '  <h2 class="cta-headline">' + (objectiveFirstPerson ? escapeHtml(objectiveFirstPerson) : "Partner with me") + "</h2>\n" +
+      '  <a class="pill pill-dark" href="' + mailHref + '">Partner With Me</a>\n' +
+      "</section>";
 
     return (
       "<!DOCTYPE html>\n" +
@@ -359,28 +423,12 @@
       "</style>\n" +
       "</head>\n" +
       "<body>\n" +
-      '<header class="hero">\n' +
-      '  <p class="eyebrow">Apostello Comm &middot; Missionary Update</p>\n' +
-      "  <h1>" + escapeHtml(fullName) + "</h1>\n" +
-      (fields.MinistryType ? '  <p class="badge">' + escapeHtml(fields.MinistryType) + "</p>\n" : "") +
-      (hook ? '  <p class="hook">' + hook + "</p>\n" : "") +
-      "</header>\n" +
-      '<main class="container">\n' +
-      '  <section class="section about">\n' +
-      "    <h2>About me</h2>\n" +
-      "    <p>" + escapeHtml(summaryFirstPerson) + "</p>\n" +
-      (fields.SendingOrganization
-        ? '    <p class="sent-by">I&#39;m sent by ' + escapeHtml(fields.SendingOrganization) + "</p>\n"
-        : "") +
-      "  </section>\n" +
+      heroSection + "\n" +
+      "<main>\n" +
+      "  " + aboutSection.replace(/\n/g, "\n  ") + "\n" +
       (whereSection ? "  " + whereSection.replace(/\n/g, "\n  ") + "\n" : "") +
-      '  <section class="section involved">\n' +
-      "    <h2>Get involved</h2>\n" +
-      '    <p class="cta-lead">Here&#39;s how you can partner with me:</p>\n' +
-      (objectiveFirstPerson ? "    <p>" + escapeHtml(objectiveFirstPerson) + "</p>\n" : "") +
-      '    <a class="cta" href="' + mailHref + '">Get in touch</a>\n' +
-      "  </section>\n" +
       "  " + buildPhotoSection().replace(/\n/g, "\n  ") + "\n" +
+      "  " + ctaSection.replace(/\n/g, "\n  ") + "\n" +
       "</main>\n" +
       '<footer class="site-footer">\n' +
       "  <p>Site generated with Apostello Comm</p>\n" +
@@ -390,40 +438,93 @@
     );
   }
 
+  // Bold editorial/industrial template — grayscale photography, coral +
+  // sage color blocking, condensed-feeling all-caps headlines. No
+  // external font/CDN loads (same single-portable-file constraint as
+  // before): "headline" leans on a genuinely common system heavy sans
+  // (Arial Black) with tight letter-spacing and uppercase to read as
+  // condensed/industrial even where that exact font isn't installed.
   var SITE_CSS =
-    ":root{--ink:#20262b;--muted:#5c6670;--bg:#faf6f0;--panel:#ffffff;--teal:#1f4d47;" +
-    "--teal-dark:#163a35;--terracotta:#c1553d;--line:#e6dfd3;}" +
+    ":root{--coral:#E8623A;--coral-dark:#c94f2c;--sage:#5C6E5A;--ink:#1A1A1A;--white:#fff;" +
+    "--headline:'Arial Black','Helvetica Neue',Arial,sans-serif;" +
+    "--body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}" +
     "*{box-sizing:border-box;}" +
-    "body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;" +
-    "background:var(--bg);color:var(--ink);line-height:1.55;}" +
-    "h1,h2{font-family:Georgia,'Iowan Old Style','Palatino Linotype',serif;margin:0;}" +
-    ".hero{background:linear-gradient(160deg,var(--teal),var(--teal-dark));color:#fdf9f3;" +
-    "padding:4rem 1.5rem 3.5rem;text-align:center;}" +
-    ".hero .eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:.75rem;color:#d9c9b8;margin:0 0 .9rem;}" +
-    ".hero h1{font-size:2.4rem;margin-bottom:.6rem;}" +
-    ".hero .badge{display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);" +
-    "border-radius:999px;padding:.3rem .9rem;font-size:.85rem;margin-bottom:1rem;}" +
-    ".hero .hook{max-width:34rem;margin:0 auto;font-size:1.1rem;color:#f1e8dc;}" +
-    ".container{max-width:640px;margin:0 auto;padding:0 1.5rem;}" +
-    ".section{background:var(--panel);border:1px solid var(--line);border-radius:12px;" +
-    "padding:2rem;margin-top:-2.5rem;position:relative;z-index:1;margin-bottom:1.75rem;}" +
-    ".section h2{font-size:1.3rem;color:var(--teal-dark);margin-bottom:.9rem;" +
-    "border-bottom:2px solid var(--terracotta);display:inline-block;padding-bottom:.25rem;}" +
-    ".section p{margin:0 0 .75rem;color:var(--ink);}" +
-    ".sent-by{color:var(--muted);font-size:.9rem;font-style:italic;}" +
-    ".where{margin-top:0;}" +
-    ".location{display:flex;align-items:center;gap:.5rem;font-size:1.05rem;color:var(--teal-dark);font-weight:600;}" +
-    ".pin{flex-shrink:0;color:var(--terracotta);}" +
-    ".cta{display:inline-block;background:var(--terracotta);color:#fff;text-decoration:none;" +
-    "font-weight:600;padding:.75rem 1.6rem;border-radius:999px;margin-top:.4rem;}" +
-    ".cta:hover{background:#a8462f;}" +
-    ".photo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.9rem;}" +
-    ".photo-slot{aspect-ratio:4/3;border-radius:8px;border:1.5px dashed var(--line);" +
-    "background:repeating-linear-gradient(45deg,#f2ece2,#f2ece2 10px,#ece4d6 10px,#ece4d6 20px);" +
-    "display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.85rem;}" +
-    ".site-footer{text-align:center;color:var(--muted);font-size:.8rem;padding:2rem 1rem 3rem;}" +
-    "@media (max-width:520px){.hero{padding:3rem 1.25rem 3rem;}.hero h1{font-size:1.9rem;}" +
-    ".section{padding:1.5rem;margin-top:-1.5rem;}}";
+    "body{margin:0;font-family:var(--body);color:var(--ink);line-height:1.65;background:var(--white);}" +
+    "h1,h2{font-family:var(--headline);margin:0;text-transform:uppercase;letter-spacing:-.02em;font-weight:900;}" +
+    "p{margin:0 0 1rem;}" +
+    "a{color:inherit;}" +
+    // Placeholder photo slots — no photo hosting in this pipeline, so a
+    // human pastes a real <img> in later (see the HTML comments); the
+    // grayscale filter applies to that future <img> automatically.
+    ".photo-slot{width:100%;height:100%;min-height:220px;display:flex;align-items:center;justify-content:center;" +
+    "background:repeating-linear-gradient(135deg,#2c2c2c,#2c2c2c 12px,#1a1a1a 12px,#1a1a1a 24px);" +
+    "color:rgba(255,255,255,.55);font-family:var(--body);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;}" +
+    ".photo-slot img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(100%);}" +
+    // Hero: full-bleed photo, dark gradient scrim for legible overlaid
+    // text, slim top bar (mark + contact pill) laid directly on the photo.
+    ".hero{position:relative;min-height:92vh;display:flex;flex-direction:column;color:var(--white);overflow:hidden;}" +
+    ".hero-photo{position:absolute;inset:0;z-index:0;}" +
+    ".hero-photo .photo-slot{min-height:100%;}" +
+    ".hero::after{content:'';position:absolute;inset:0;z-index:1;" +
+    "background:linear-gradient(180deg,rgba(26,26,26,.4) 0%,rgba(26,26,26,.1) 35%,rgba(26,26,26,.88) 100%);}" +
+    ".hero-top,.hero-content{position:relative;z-index:2;}" +
+    ".hero-top{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.5rem;}" +
+    ".hero-top .mark{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;}" +
+    ".hero-content{margin-top:auto;padding:2rem 1.5rem 3.5rem;}" +
+    ".hero-content .eyebrow{display:inline-block;background:var(--coral);color:var(--white);font-size:.72rem;" +
+    "font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.35rem .9rem;border-radius:999px;margin-bottom:1.1rem;}" +
+    ".hero-content h1{font-size:clamp(2.4rem,9vw,5.5rem);line-height:.95;margin-bottom:1rem;}" +
+    ".hero-content .hook{max-width:34rem;font-size:1.15rem;font-family:var(--body);text-transform:none;" +
+    "letter-spacing:normal;font-weight:400;color:rgba(255,255,255,.92);margin:0;}" +
+    // Pills — solid coral everywhere except when sitting on a coral
+    // background itself (the closing CTA), where it inverts to near-black
+    // for contrast; ghost variant for the hero top bar over the photo.
+    ".pill{display:inline-block;font-family:var(--body);font-weight:700;text-transform:uppercase;" +
+    "letter-spacing:.06em;font-size:.78rem;padding:.75rem 1.6rem;border-radius:999px;text-decoration:none;" +
+    "border:2px solid transparent;white-space:nowrap;}" +
+    ".pill-solid{background:var(--coral);color:var(--white);}" +
+    ".pill-solid:hover{background:var(--coral-dark);}" +
+    ".pill-dark{background:var(--ink);color:var(--white);}" +
+    ".pill-dark:hover{background:#000;}" +
+    // 50/50 split section (About/Mission): photo one side, color block
+    // with white text the other.
+    ".split{display:grid;grid-template-columns:1fr 1fr;min-height:520px;}" +
+    ".split-photo{position:relative;min-height:320px;}" +
+    ".split-block{display:flex;flex-direction:column;justify-content:center;padding:3.5rem 3rem;color:var(--white);}" +
+    ".split-block.sage{background:var(--sage);}" +
+    ".split-block h2{font-size:clamp(1.8rem,3.5vw,2.6rem);margin-bottom:1.25rem;}" +
+    ".split-block p{font-family:var(--body);text-transform:none;letter-spacing:normal;font-weight:400;" +
+    "font-size:1.05rem;line-height:1.75;}" +
+    ".split-block .sent-by{font-size:.9rem;opacity:.85;font-style:italic;margin-bottom:0;}" +
+    // Where I serve: bold full-width typographic statement, near-black.
+    ".statement{background:var(--ink);color:var(--white);text-align:center;padding:5rem 1.5rem;}" +
+    ".statement-label{font-family:var(--body);text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;" +
+    "font-weight:600;color:rgba(255,255,255,.6);margin-bottom:1rem;}" +
+    ".statement-text{font-size:clamp(2.4rem,8vw,5rem);line-height:1;}" +
+    // Photo band: one larger slot + two stacked smaller ones, woven in
+    // with the same visual language as the splits rather than a grid.
+    ".photo-band{display:grid;grid-template-columns:2fr 1fr;gap:.5rem;padding:.5rem;background:var(--white);}" +
+    ".photo-band-main{min-height:420px;position:relative;}" +
+    ".photo-band-side{display:grid;grid-template-rows:1fr 1fr;gap:.5rem;}" +
+    ".photo-band-side .photo-slot{min-height:206px;}" +
+    // Closing CTA: full-bleed coral block, MainObjective as the headline.
+    ".cta-section{background:var(--coral);color:var(--white);text-align:center;padding:5.5rem 1.5rem;}" +
+    ".cta-label{font-family:var(--body);text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;" +
+    "font-weight:700;margin-bottom:1rem;}" +
+    ".cta-headline{font-size:clamp(2rem,6vw,3.5rem);max-width:44rem;margin:0 auto 2.25rem;line-height:1.05;}" +
+    ".site-footer{text-align:center;padding:2rem 1rem;font-size:.78rem;color:#8a8a8a;font-family:var(--body);" +
+    "text-transform:none;letter-spacing:normal;background:var(--white);}" +
+    "@media (max-width:760px){" +
+    ".split{grid-template-columns:1fr;min-height:0;}" +
+    ".split-photo{min-height:280px;}" +
+    ".split-block{padding:2.5rem 1.5rem;}" +
+    ".photo-band{grid-template-columns:1fr;}" +
+    ".photo-band-main{min-height:260px;}" +
+    ".photo-band-side .photo-slot{min-height:180px;}" +
+    ".hero-content h1{font-size:clamp(2.25rem,12vw,3rem);}" +
+    ".hero-top{padding:1.1rem;}" +
+    ".statement,.cta-section{padding:3.5rem 1.25rem;}" +
+    "}";
 
   function showDecision(security) {
     var lines = [];
