@@ -17,6 +17,9 @@
   var clientSearch = document.getElementById("client-search");
   var clientResults = document.getElementById("client-results");
   var backendWarning = document.getElementById("backend-warning");
+  var photoPicker = document.getElementById("photo-picker");
+  var photoGrid = document.getElementById("photo-grid");
+  var photoEmpty = document.getElementById("photo-empty");
   var parseError = document.getElementById("parse-error");
   var generateBtn = document.getElementById("generate-btn");
   var blockedMessage = document.getElementById("blocked-message");
@@ -50,6 +53,107 @@
   var clientMap = {};
   var activeResultIndex = -1;
   var searchToken = 0;
+
+  // ---- photo picker: fetched via listPhotos once a client is selected
+  // through the name search (not on a manual TSV paste — there's no
+  // ClientID to key the lookup on until a client is actually resolved).
+  // slotAssignments tracks which selected photo (by viewUrl) fills which
+  // of the 5 generated-site slots; buildSiteHtml reads it at generation
+  // time in place of the placeholder-only photoSlotHtml() calls. ---------
+
+  var SLOT_LABELS = {
+    hero: "Hero (full-bleed)",
+    about: "About section",
+    gallery1: "Gallery 1",
+    gallery2: "Gallery 2",
+    gallery3: "Gallery 3 (optional)"
+  };
+  var slotAssignments = { hero: "", about: "", gallery1: "", gallery2: "", gallery3: "" };
+  var currentRegFields = null;
+  var photoToken = 0;
+
+  function isSecuritySensitive(fields) {
+    return !!fields && fields.SecuritySensitive.trim().toUpperCase() === "YES";
+  }
+
+  function slotSelectFor(photo) {
+    var select = document.createElement("select");
+    select.dataset.photoUrl = photo.viewUrl;
+    var noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "Not used";
+    select.appendChild(noneOpt);
+    Object.keys(SLOT_LABELS).forEach(function (slotKey) {
+      var opt = document.createElement("option");
+      opt.value = slotKey;
+      opt.textContent = SLOT_LABELS[slotKey];
+      select.appendChild(opt);
+    });
+    select.addEventListener("change", function () {
+      var chosenSlot = select.value;
+      // A slot can only hold one photo — clear this photo out of any slot
+      // it previously held, then (if a slot was chosen) claim it, resetting
+      // whichever other photo's dropdown previously claimed that slot.
+      Object.keys(slotAssignments).forEach(function (k) {
+        if (slotAssignments[k] === photo.viewUrl) slotAssignments[k] = "";
+      });
+      if (chosenSlot) {
+        var previousUrl = slotAssignments[chosenSlot];
+        if (previousUrl && previousUrl !== photo.viewUrl) {
+          var previousSelect = photoGrid.querySelector('select[data-photo-url="' + previousUrl.replace(/"/g, '\\"') + '"]');
+          if (previousSelect) previousSelect.value = "";
+        }
+        slotAssignments[chosenSlot] = photo.viewUrl;
+      }
+    });
+    return select;
+  }
+
+  function renderPhotos(photos, sensitive) {
+    photoGrid.innerHTML = "";
+    slotAssignments = { hero: "", about: "", gallery1: "", gallery2: "", gallery3: "" };
+    photoPicker.hidden = false;
+
+    if (photos.length === 0) {
+      photoEmpty.hidden = false;
+      return;
+    }
+    photoEmpty.hidden = true;
+
+    photos.forEach(function (photo) {
+      var fig = document.createElement("figure");
+      fig.className = "photo-thumb";
+
+      var img = document.createElement("img");
+      img.src = photo.viewUrl;
+      img.alt = photo.name || "";
+      img.loading = "lazy";
+      fig.appendChild(img);
+
+      var controls = document.createElement("div");
+      controls.className = "photo-thumb-controls";
+      controls.appendChild(slotSelectFor(photo));
+
+      if (sensitive) {
+        var note = document.createElement("span");
+        note.className = "photo-thumb-sensitive";
+        note.textContent = "Confirm this is cleared for public use";
+        controls.appendChild(note);
+      }
+
+      fig.appendChild(controls);
+      photoGrid.appendChild(fig);
+    });
+  }
+
+  function loadPhotos(clientId) {
+    var token = ++photoToken;
+    ApoComm.fetchPhotos(clientId).then(function (result) {
+      if (token !== photoToken) return; // superseded by a newer client selection
+      if (result.warning) showBackendWarning(result.warning);
+      renderPhotos(result.photos, isSecuritySensitive(currentRegFields));
+    });
+  }
 
   function renderClientResults(query) {
     var token = ++searchToken;
@@ -93,7 +197,9 @@
     clientResults.hidden = true;
     ApoComm.fetchClientRow(clientId).then(function (result) {
       showBackendWarning(result.warning);
+      currentRegFields = result.fields || null;
       tsvInput.value = result.fields ? ApoComm.regFieldsToBackendRow(result.fields).join("\t") : client.raw;
+      loadPhotos(clientId);
     });
   }
 
@@ -319,12 +425,20 @@
     );
   }
 
-  // A placeholder div (unchanged convention from before — there's no photo
-  // hosting in this pipeline, so a human pastes in a real <img> later)
-  // preceded by an HTML comment marking exactly where. The grayscale
-  // treatment is applied via CSS to `.photo-slot img`, so whatever photo
-  // eventually goes here is grayscaled automatically, not by hand.
-  function photoSlotHtml(note) {
+  // A real <img> when a photo was picked for this slot (see the photo
+  // picker above); otherwise the original placeholder div (unchanged
+  // convention — there's no photo hosting for a client with no Drive
+  // photos yet, so a human pastes in a real <img> later) preceded by an
+  // HTML comment marking exactly where. Either way the grayscale
+  // treatment is applied via CSS to `.photo-slot img`, so a picked photo
+  // is grayscaled automatically, same as a manually-pasted one.
+  function photoSlotHtml(note, viewUrl) {
+    if (viewUrl) {
+      return (
+        "<!-- " + note + " -->\n" +
+        '<div class="photo-slot"><img src="' + escapeHtml(viewUrl) + '" alt=""></div>'
+      );
+    }
     return (
       "<!-- " + note + " -->\n" +
       '<div class="photo-slot"><span>Photo</span></div>'
@@ -335,10 +449,10 @@
   // (one larger + two smaller, stacked) rather than a separate uniform
   // gallery grid — keeps the same split-screen visual rhythm as the rest
   // of the page instead of reading like a bolted-on gallery.
-  function buildPhotoSection() {
-    var main = photoSlotHtml("PHOTO 3: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
-    var side1 = photoSlotHtml("PHOTO 4: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
-    var side2 = photoSlotHtml("PHOTO 5 (optional): replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
+  function buildPhotoSection(slots) {
+    var main = photoSlotHtml("PHOTO 3: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">", slots.gallery1);
+    var side1 = photoSlotHtml("PHOTO 4: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">", slots.gallery2);
+    var side2 = photoSlotHtml("PHOTO 5 (optional): replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">", slots.gallery3);
     return (
       '<section class="photo-band">\n' +
       '  <div class="photo-band-main">\n' +
@@ -352,7 +466,8 @@
     );
   }
 
-  function buildSiteHtml(fields, security) {
+  function buildSiteHtml(fields, security, slots) {
+    slots = slots || { hero: "", about: "", gallery1: "", gallery2: "", gallery3: "" };
     var fullName = (fields.FirstName + " " + fields.LastName).trim();
     var firstName = fields.FirstName.trim();
     var title = escapeHtml(fullName) + " — Apostello Comm";
@@ -363,8 +478,8 @@
 
     var whereSection = buildWhereSection(fields, security);
 
-    var heroPhoto = photoSlotHtml("PHOTO 1 (hero, full-bleed): replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
-    var aboutPhoto = photoSlotHtml("PHOTO 2: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">");
+    var heroPhoto = photoSlotHtml("PHOTO 1 (hero, full-bleed): replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">", slots.hero);
+    var aboutPhoto = photoSlotHtml("PHOTO 2: replace this placeholder div with e.g. <img src=\"https://...\" alt=\"...\">", slots.about);
 
     // Slim bar overlaid directly on the hero photo (not a separate
     // header element) — a small text mark plus the one contact CTA the
@@ -427,7 +542,7 @@
       "<main>\n" +
       "  " + aboutSection.replace(/\n/g, "\n  ") + "\n" +
       (whereSection ? "  " + whereSection.replace(/\n/g, "\n  ") + "\n" : "") +
-      "  " + buildPhotoSection().replace(/\n/g, "\n  ") + "\n" +
+      "  " + buildPhotoSection(slots).replace(/\n/g, "\n  ") + "\n" +
       "  " + ctaSection.replace(/\n/g, "\n  ") + "\n" +
       "</main>\n" +
       '<footer class="site-footer">\n' +
@@ -567,7 +682,7 @@
 
     showDecision(security);
 
-    currentHtml = buildSiteHtml(fields, security);
+    currentHtml = buildSiteHtml(fields, security, slotAssignments);
     currentFileName = "index.html";
 
     var savePath = "/sites/" + (fields.ClientID || slug(fields.FirstName + "-" + fields.LastName)) + "/index.html";
