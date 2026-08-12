@@ -116,8 +116,31 @@
     if (value && Array.isArray(value.results)) return value.results;
     if (value && Array.isArray(value.clients)) return value.clients;
     if (value && Array.isArray(value.months)) return value.months;
+    if (value && Array.isArray(value.photos)) return value.photos;
     if (value && Array.isArray(value.data)) return value.data;
     return [];
+  }
+
+  // Normalizes one listPhotos entry into { viewUrl, id, name }, tolerating
+  // a bare URL string or an object under a few common Drive-API-flavored
+  // key names (viewUrl/url/link/webViewLink for the URL itself). An entry
+  // with no extractable URL is dropped rather than shown as a broken
+  // thumbnail.
+  function entryToPhoto(entry) {
+    if (typeof entry === "string") {
+      var url = entry.trim();
+      return url ? { viewUrl: url, id: url, name: "" } : null;
+    }
+    if (entry && typeof entry === "object") {
+      var viewUrl = entry.viewUrl || entry.url || entry.link || entry.webViewLink || "";
+      if (!viewUrl) return null;
+      return {
+        viewUrl: viewUrl,
+        id: entry.id || entry.fileId || viewUrl,
+        name: entry.name || entry.fileName || ""
+      };
+    }
+    return null;
   }
 
   // True for the shapes a reachable-but-empty/not-found response is
@@ -229,6 +252,21 @@
       return { ok: true };
     }).catch(function (err) {
       return { ok: false, error: err.message };
+    });
+  };
+
+  // Lists the photos in a client's Drive folder (set up manually per
+  // client — there's no upload pipeline in this codebase). Reachable-but-
+  // empty (no photos yet, or folder not yet created) resolves ok:true with
+  // an empty list, same "not broken, just nothing there" convention as
+  // every other read action.
+  Backend.listPhotos = function (clientId) {
+    return call({ action: "listPhotos", clientId: clientId }).then(function (json) {
+      if (looksEmpty(json)) return { ok: true, photos: [] };
+      var photos = asList(json).map(entryToPhoto).filter(Boolean);
+      return { ok: true, photos: photos };
+    }).catch(function (err) {
+      return { ok: false, error: err.message, photos: [] };
     });
   };
 

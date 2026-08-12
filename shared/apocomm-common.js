@@ -500,6 +500,19 @@
     });
   };
 
+  // Photos live only in each client's Drive folder — there's no local
+  // cache to fall back to (nothing was ever written locally for them), so
+  // a transport failure just means an empty list plus the usual warning,
+  // same as every other backend-first read once fallback data runs out.
+  ApoComm.fetchPhotos = function (clientId) {
+    return ApoComm.Backend.listPhotos(clientId).then(function (result) {
+      return {
+        photos: result.photos,
+        warning: result.ok ? null : BACKEND_DOWN_WARNING
+      };
+    });
+  };
+
   ApoComm.fetchIntakeRow = function (clientId, month) {
     return ApoComm.Backend.getIntake(clientId, month).then(function (result) {
       if (result.ok && result.fields) {
