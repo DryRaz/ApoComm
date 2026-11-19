@@ -699,13 +699,30 @@
     ".statement,.cta-section{padding:3.5rem 1.25rem;}" +
     "}";
 
-  function showDecision(security) {
+  var LANGUAGE_NAMES = { english: "English", french: "French" };
+
+  function showDecision(security, fields) {
     var lines = [];
     lines.push('<div class="row"><strong>SecuritySensitive:</strong> ' + (security.sensitive ? "YES" : "NO") + "</div>");
     if (security.sensitive) {
       lines.push('<div class="row"><strong>Country shown:</strong> ' + (security.allowCountry ? "yes" : "no (not explicitly permitted)") + "</div>");
       lines.push('<div class="row"><strong>City shown:</strong> ' + (security.allowCity ? "yes" : "no (not explicitly permitted)") + "</div>");
     }
+
+    var lang = ApoComm.checkLanguageConsistency(fields);
+    lines.push('<div class="row"><strong>Page language:</strong> ' + LANGUAGE_NAMES[lang.declared] + "</div>");
+    // Non-blocking, like the ClientID mismatch banner in the newsletter
+    // tool: the headings follow PrimaryLanguage and the missionary's own
+    // prose is never translated, so when the two disagree the page comes
+    // out with headings in one language and paragraphs in the other. The
+    // generator cannot resolve that — only a human can decide whether to
+    // change the flag or rewrite the text — but it should not stay silent.
+    if (lang.mismatch) {
+      lines.push('<div class="row warning"><strong>Language mismatch:</strong> the headings will be in ' +
+        LANGUAGE_NAMES[lang.declared] + ', but the mission summary reads as ' + LANGUAGE_NAMES[lang.looksLike] +
+        '. The page will mix the two. Either change Primary Language on the client record, or rewrite the text.</div>');
+    }
+
     securityDecision.innerHTML = lines.join("");
     securityDecision.hidden = false;
   }
@@ -738,7 +755,7 @@
       return;
     }
 
-    showDecision(security);
+    showDecision(security, fields);
 
     currentHtml = buildSiteHtml(fields, security, slotAssignments);
     currentFileName = "index.html";

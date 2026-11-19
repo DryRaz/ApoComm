@@ -371,6 +371,47 @@
   // The two values the rest of the codebase keys its dictionaries by.
   ApoComm.LANGUAGES = ["english", "french"];
 
+  // PrimaryLanguage decides the scaffolding — headings, CTA, sign-off —
+  // and the missionary's own prose is never translated, by design. So when
+  // the flag and the prose disagree you get French headings wrapped around
+  // English paragraphs: the exact mirror of the bug where English chrome
+  // wrapped French sentences, and just as unsendable. Nothing detected it,
+  // because each half was individually doing what it was told.
+  //
+  // This is a cheap stopword count, not language detection: it only has to
+  // separate French prose from English prose in a paragraph of ordinary
+  // writing. It returns null whenever it is not confident — too little
+  // text, or no clear winner — so a caller can only ever surface a warning
+  // it is fairly sure about. It never blocks and never rewrites anything.
+  var FRENCH_MARKERS = /\b(le|la|les|des|du|une|dans|pour|avec|nous|notre|nos|est|sont|qui|que|chez|ainsi|aussi|plus|cette|leur|sur|par|mais|donc)\b/gi;
+  var ENGLISH_MARKERS = /\b(the|and|of|with|our|we|is|are|that|this|for|to|in|on|from|have|has|been|will|their|about|they)\b/gi;
+
+  ApoComm.looksLikeLanguage = function (text) {
+    var s = String(text || "");
+    if (s.split(/\s+/).filter(Boolean).length < 12) return null;
+    var fr = (s.match(FRENCH_MARKERS) || []).length;
+    var en = (s.match(ENGLISH_MARKERS) || []).length;
+    if (/[àâçéèêëîïôûùüœ]/i.test(s)) fr += 3;
+    if (fr === 0 && en === 0) return null;
+    if (fr >= en * 2) return "french";
+    if (en >= fr * 2) return "english";
+    return null;
+  };
+
+  // Returns {mismatch, declared, looksLike} for the prose a public page
+  // actually renders. `mismatch` is true only when the guess is confident
+  // and disagrees with PrimaryLanguage.
+  ApoComm.checkLanguageConsistency = function (regFields) {
+    var declared = ApoComm.detectLanguage(regFields.PrimaryLanguage);
+    var prose = [regFields.MissionSummary, regFields.MainObjective].filter(Boolean).join(" ");
+    var looksLike = ApoComm.looksLikeLanguage(prose);
+    return {
+      declared: declared,
+      looksLike: looksLike,
+      mismatch: !!looksLike && looksLike !== declared
+    };
+  };
+
   ApoComm.escapeHtml = function (value) {
     return String(value == null ? "" : value)
       .replace(/&/g, "&amp;")

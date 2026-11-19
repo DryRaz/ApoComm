@@ -423,3 +423,17 @@ button {
     align-items: stretch;
   }
 }
+
+/* A language mismatch between Primary Language and the missionary's own
+   prose: the headings follow the flag, the text is never translated, so
+   the page comes out half in each. Non-blocking — the generator cannot
+   decide which side is wrong — but it must not read like the other rows
+   in the decision panel, which are all statements of fact. */
+.security-decision .row.warning {
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-left: 3px solid var(--rust);
+  background: #fbefec;
+  color: var(--ink);
+  border-radius: 0 4px 4px 0;
+}
