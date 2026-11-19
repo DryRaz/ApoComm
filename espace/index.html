@@ -19,8 +19,11 @@
 
   <header class="masthead">
     <p class="eyebrow">Apostello Comm</p>
-    <h1 id="greeting">My space</h1>
-    <p class="lede" id="lede">Loading your content…</p>
+    <!-- Both languages until the backend tells us which one this client
+         reads; replaced by the greeting on success, kept as-is on a
+         refusal, where we never find out. -->
+    <h1 id="greeting">Mon espace · My space</h1>
+    <p class="lede" id="lede">Chargement… · Loading…</p>
   </header>
 
   <!-- Shown when the token is missing, wrong, or no longer in the sheet, and
@@ -83,7 +86,7 @@
 
   </section>
 
-  <footer class="foot">
+  <footer class="foot" id="foot">
     <p id="foot-note"></p>
   </footer>
 

@@ -146,6 +146,10 @@
     show("no-access", true);
     show("content", false);
     setText("lede", "");
+    // The footer explains that the link is personal and that we never ask
+    // for a password. On a refusal there is no link to speak of, and the
+    // note would sit under an empty rule, so the whole footer goes.
+    show("foot", false);
   }
 
   /* The backend cannot know whether a site file has actually been committed
