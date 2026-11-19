@@ -60,6 +60,16 @@ const SEARCH_MAX_RESULTS = 25;
 // handful of people using the tools; a scraping loop hits it immediately.
 const RATE_LIMIT_PER_MINUTE = 60;
 
+// Writes get their own, far tighter ceiling, per hour rather than per
+// minute. 60/minute is a sane reading budget and an absurd writing one:
+// it would allow ~86,000 registrations a day, and registerClient does not
+// merely append a row — it creates a Drive folder per call, shares it, and
+// enrols that address into next month's reminder email. An abuse loop
+// would fill the Sheet, litter Drive with folders, and make the script
+// mail strangers on the 1st. Real signups arrive one at a time.
+const WRITE_ACTIONS = ['registerClient', 'saveIntake'];
+const RATE_LIMIT_WRITES_PER_HOUR = 10;
+
 function doGet(e) {
   const params = e.parameter;
 
@@ -71,6 +81,11 @@ function doGet(e) {
   if (!underRateLimit()) {
     journal('', 'DENIED', 'rate limit, action=' + (params.action || '(none)'));
     return jsonOutput({ error: 'Rate limit exceeded, try again shortly' });
+  }
+
+  if (!underWriteLimit(params.action)) {
+    journal('', 'DENIED', 'write limit reached this hour, action=' + params.action);
+    return jsonOutput({ error: 'Too many submissions this hour, try again later' });
   }
 
   try {
@@ -155,6 +170,19 @@ function underRateLimit() {
   const current = parseInt(cache.get(bucket) || '0', 10);
   if (current >= RATE_LIMIT_PER_MINUTE) return false;
   cache.put(bucket, String(current + 1), 120);
+  return true;
+}
+
+// Checked only for the actions in WRITE_ACTIONS, and only after the
+// per-minute check has already passed. Hourly bucket; CacheService entries
+// last at most 6 hours, which comfortably covers one.
+function underWriteLimit(action) {
+  if (WRITE_ACTIONS.indexOf(action) === -1) return true;
+  const cache = CacheService.getScriptCache();
+  const bucket = 'wl_' + Math.floor(Date.now() / 3600000);
+  const current = parseInt(cache.get(bucket) || '0', 10);
+  if (current >= RATE_LIMIT_WRITES_PER_HOUR) return false;
+  cache.put(bucket, String(current + 1), 7200);
   return true;
 }
 
