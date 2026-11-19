@@ -353,7 +353,7 @@
   // a language this agency does not serve.
   //
   // The registration form now offers a two-way choice rather than a free
-  // text field (see admin/registration), so in practice the value is
+  // text field (see /registration), so in practice the value is
   // "French" or "English". The looser matching below stays for rows
   // written before that change, and for anything typed into the Sheet by
   // hand: the English name, the endonym, and ISO codes with or without a

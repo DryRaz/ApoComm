@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apostello Comm — Missionary Self-Registration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <header class="page-header">
+    <p class="eyebrow">Apostello Comm</p>
+    <h1>Let's get to know you</h1>
+    <p class="subtitle">A few short steps to set up your communications with us. You can go back and change anything before you submit.</p>
+  </header>
+
+  <nav class="step-indicator" aria-label="Registration steps">
+    <p class="step-current-label"><span id="step-position">Step 1 of 6</span> — <span id="step-current-name">Identity</span></p>
+    <ol id="step-list">
+      <li class="step-indicator-item" data-step-index="0"><span class="step-dot"><span class="step-num">1</span></span><span class="step-name">Identity</span></li>
+      <li class="step-indicator-item" data-step-index="1"><span class="step-dot"><span class="step-num">2</span></span><span class="step-name">Mission</span></li>
+      <li class="step-indicator-item" data-step-index="2"><span class="step-dot"><span class="step-num">3</span></span><span class="step-name">Audience</span></li>
+      <li class="step-indicator-item" data-step-index="3"><span class="step-dot"><span class="step-num">4</span></span><span class="step-name">Needs</span></li>
+      <li class="step-indicator-item" data-step-index="4"><span class="step-dot"><span class="step-num">5</span></span><span class="step-name">Content</span></li>
+      <li class="step-indicator-item" data-step-index="5"><span class="step-dot"><span class="step-num">6</span></span><span class="step-name">Admin</span></li>
+    </ol>
+    <div class="progress-track" role="progressbar" aria-label="Profile completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <p class="progress-label" id="progress-label">0% complete</p>
+  </nav>
+
+  <form id="registration-form" novalidate>
+
+    <fieldset class="step" data-step-index="0">
+      <legend>Identity</legend>
+      <p class="step-intro">The basics — how we'll know you and reach you.</p>
+
+      <div class="field">
+        <label for="LastName">What's your last name? <span class="tag-required">required</span></label>
+        <input type="text" id="LastName" name="LastName" required>
+        <p class="error" data-error-for="LastName"></p>
+      </div>
+
+      <div class="field">
+        <label for="FirstName">And your first name? <span class="tag-required">required</span></label>
+        <input type="text" id="FirstName" name="FirstName" required>
+        <p class="error" data-error-for="FirstName"></p>
+      </div>
+
+      <div class="field">
+        <label for="Email">What's the best email to reach you? <span class="tag-required">required</span></label>
+        <input type="email" id="Email" name="Email" required>
+        <p class="error" data-error-for="Email"></p>
+      </div>
+
+      <div class="field">
+        <label for="WhatsAppPhone">Do you have a WhatsApp number we can use?</label>
+        <input type="tel" id="WhatsAppPhone" name="WhatsAppPhone" placeholder="+1 555 123 4567">
+      </div>
+
+      <div class="field">
+        <span class="group-label" id="PrimaryLanguage-label">Which language should we write in for you? <span class="tag-required">required</span></span>
+        <div class="lang-choice" role="radiogroup" aria-labelledby="PrimaryLanguage-label">
+          <label class="lang-option">
+            <input type="radio" name="PrimaryLanguage" value="English" required>
+            <span>English</span>
+          </label>
+          <label class="lang-option">
+            <input type="radio" name="PrimaryLanguage" value="French" required>
+            <span>Français</span>
+          </label>
+        </div>
+        <p class="hint">This sets the language of your newsletter, your social posts and your public page. We can change it later.</p>
+        <p class="error" data-error-for="PrimaryLanguage"></p>
+      </div>
+
+      <div class="field">
+        <label for="Timezone">What time zone are you in?</label>
+        <input type="text" id="Timezone" name="Timezone" placeholder="e.g. UTC+2">
+      </div>
+    </fieldset>
+
+    <fieldset class="step" data-step-index="1" hidden>
+      <legend>Mission</legend>
+      <p class="step-intro">Tell us where you're headed and what you'll be doing.</p>
+
+      <div class="field">
+        <label for="SendingOrganization">Who is your sending organization? <span class="tag-required">required</span></label>
+        <input type="text" id="SendingOrganization" name="SendingOrganization" required>
+        <p class="error" data-error-for="SendingOrganization"></p>
+      </div>
+
+      <div class="field">
+        <label for="CountryOfService">Where will you be serving? <span class="tag-required">required</span></label>
+        <input type="text" id="CountryOfService" name="CountryOfService" required>
+        <p class="error" data-error-for="CountryOfService"></p>
+      </div>
+
+      <div class="field">
+        <label for="CityOfService">Which city, if you know it yet?</label>
+        <input type="text" id="CityOfService" name="CityOfService">
+      </div>
+
+      <div class="field">
+        <label for="MinistryType">What kind of ministry will you be doing? <span class="tag-required">required</span></label>
+        <input type="text" id="MinistryType" name="MinistryType" required placeholder="e.g. Church planting, Medical, Education">
+        <p class="error" data-error-for="MinistryType"></p>
+      </div>
+
+      <div class="field">
+        <label for="DepartureDate">When do you leave? <span class="tag-required">required</span></label>
+        <input type="date" id="DepartureDate" name="DepartureDate" required>
+        <p class="error" data-error-for="DepartureDate"></p>
+      </div>
+
+      <div class="field">
+        <label for="CommitmentDuration">How long is your commitment?</label>
+        <input type="text" id="CommitmentDuration" name="CommitmentDuration" placeholder="e.g. 2 years">
+      </div>
+
+      <div class="field">
+        <label for="MissionSummary">Tell us about your mission, in your own words. <span class="tag-required">required</span></label>
+        <textarea id="MissionSummary" name="MissionSummary" rows="5" required
+          placeholder="Describe your field, your ministry, and anything we should know."></textarea>
+        <p class="hint">If your situation calls for discretion — a restricted-access country, a sensitive location — just say so here. We'll have someone review your profile before anything is shared publicly.</p>
+        <p class="error" data-error-for="MissionSummary"></p>
+      </div>
+    </fieldset>
+
+    <fieldset class="step" data-step-index="2" hidden>
+      <legend>Audience</legend>
+      <p class="step-intro">Who's already supporting you, and how do we reach them?</p>
+
+      <div class="field">
+        <label for="CurrentPartnersCount">How many partners do you currently have? <span class="tag-required">required</span></label>
+        <input type="number" id="CurrentPartnersCount" name="CurrentPartnersCount" min="0" step="1" required>
+        <p class="error" data-error-for="CurrentPartnersCount"></p>
+      </div>
+
+      <div class="field">
+        <label for="AudienceSegments">Who makes up your support network?</label>
+        <input type="text" id="AudienceSegments" name="AudienceSegments" placeholder="e.g. Church; Family; Monthly donors">
+      </div>
+
+      <div class="field">
+        <label for="ExistingEmailList">Do you already have an email list somewhere?</label>
+        <input type="text" id="ExistingEmailList" name="ExistingEmailList" placeholder="e.g. Mailchimp, ~300 contacts">
+      </div>
+    </fieldset>
+
+    <fieldset class="step" data-step-index="3" hidden>
+      <legend>Needs</legend>
+      <p class="step-intro">What would help you most, and how often?</p>
+
+      <div class="field">
+        <label for="MainObjective">What do you want your communication to achieve? <span class="tag-required">required</span></label>
+        <textarea id="MainObjective" name="MainObjective" rows="3" required
+          placeholder="What do you want your communication to achieve?"></textarea>
+        <p class="error" data-error-for="MainObjective"></p>
+      </div>
+
+      <div class="field">
+        <span class="group-label">Which services would help you most? <span class="tag-required">required</span></span>
+        <div class="checkbox-grid">
+          <label><input type="checkbox" name="RequestedServices" value="Newsletter"> Newsletter</label>
+          <label><input type="checkbox" name="RequestedServices" value="Social media"> Social media</label>
+          <label><input type="checkbox" name="RequestedServices" value="Website"> Website</label>
+          <label><input type="checkbox" name="RequestedServices" value="Photography"> Photography</label>
+          <label><input type="checkbox" name="RequestedServices" value="Video"> Video</label>
+          <label><input type="checkbox" name="RequestedServices" value="Prayer letters"> Prayer letters</label>
+          <label><input type="checkbox" name="RequestedServices" value="Graphic design"> Graphic design</label>
+          <label><input type="checkbox" name="RequestedServices" value="Translation"> Translation</label>
+        </div>
+        <p class="error" data-error-for="RequestedServices"></p>
+      </div>
+
+      <div class="field">
+        <span class="group-label">Which channels should we use to reach your supporters? <span class="tag-required">required</span></span>
+        <div class="checkbox-grid">
+          <label><input type="checkbox" name="Channels" value="Email"> Email</label>
+          <label><input type="checkbox" name="Channels" value="WhatsApp"> WhatsApp</label>
+          <label><input type="checkbox" name="Channels" value="Facebook"> Facebook</label>
+          <label><input type="checkbox" name="Channels" value="Instagram"> Instagram</label>
+          <label><input type="checkbox" name="Channels" value="YouTube"> YouTube</label>
+          <label><input type="checkbox" name="Channels" value="Printed newsletter"> Printed newsletter</label>
+          <label><input type="checkbox" name="Channels" value="Website"> Website</label>
+        </div>
+        <p class="error" data-error-for="Channels"></p>
+      </div>
+
+      <div class="field">
+        <label for="DesiredFrequency">How often would you like updates to go out? <span class="tag-required">required</span></label>
+        <select id="DesiredFrequency" name="DesiredFrequency" required>
+          <option value="" disabled selected>Select a frequency</option>
+          <option value="Weekly">Weekly</option>
+          <option value="Biweekly">Biweekly</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Quarterly">Quarterly</option>
+        </select>
+        <p class="error" data-error-for="DesiredFrequency"></p>
+      </div>
+    </fieldset>
+
+    <fieldset class="step" data-step-index="4" hidden>
+      <legend>Content</legend>
+      <p class="step-intro">A little about your voice and what you already have to work with. Nothing here is required.</p>
+
+      <div class="field">
+        <label for="DesiredTone">What tone feels most like you?</label>
+        <select id="DesiredTone" name="DesiredTone">
+          <option value="" selected>Select a tone (optional)</option>
+          <option value="Warm / personal">Warm / personal</option>
+          <option value="Formal">Formal</option>
+          <option value="Inspirational">Inspirational</option>
+          <option value="Informative">Informative</option>
+          <option value="Storytelling">Storytelling</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="ExistingWritingLink">Any past writing we could look at?</label>
+        <input type="url" id="ExistingWritingLink" name="ExistingWritingLink" placeholder="https://...">
+      </div>
+
+      <div class="field">
+        <label for="PhotosLink">Somewhere we can find your photos?</label>
+        <input type="url" id="PhotosLink" name="PhotosLink" placeholder="https://...">
+      </div>
+    </fieldset>
+
+    <fieldset class="step" data-step-index="5" hidden>
+      <legend>Admin</legend>
+      <p class="step-intro">Just the practical details, and anything else you'd like us to know.</p>
+
+      <div class="field">
+        <label for="PackageOffer">Which package works for you? <span class="tag-required">required</span></label>
+        <select id="PackageOffer" name="PackageOffer" required>
+          <option value="" disabled selected>Select an offer</option>
+          <option value="Starter">Starter</option>
+          <option value="Essential">Essential</option>
+          <option value="Premium">Premium</option>
+          <option value="Custom">Custom</option>
+        </select>
+        <p class="error" data-error-for="PackageOffer"></p>
+      </div>
+
+      <div class="field">
+        <label for="MonthlyBudget">What's your monthly budget, if you have one in mind?</label>
+        <input type="number" id="MonthlyBudget" name="MonthlyBudget" min="0" step="0.01">
+      </div>
+
+      <div class="field">
+        <label for="ContractStartDate">When should our work together begin? <span class="tag-required">required</span></label>
+        <input type="date" id="ContractStartDate" name="ContractStartDate" required>
+        <p class="error" data-error-for="ContractStartDate"></p>
+      </div>
+
+      <div class="field">
+        <label for="Notes">Anything else we should know?</label>
+        <textarea id="Notes" name="Notes" rows="3" placeholder="Optional"></textarea>
+      </div>
+    </fieldset>
+
+    <div class="form-nav">
+      <button type="button" id="back-btn" class="btn-secondary" hidden>Back</button>
+      <button type="button" id="next-btn" class="btn-primary">Continue</button>
+      <button type="submit" id="submit-btn" class="btn-primary" hidden>Submit registration</button>
+    </div>
+  </form>
+
+  <section id="result" class="result" hidden>
+    <p class="eyebrow">Thank you</p>
+    <h2>Your profile is on its way</h2>
+
+    <div id="security-banner" class="security-banner" hidden>
+      <p class="security-banner-title">One more step, quietly, on our end</p>
+      <p>Thank you for trusting us with that detail. Because of what you shared, a team member will review your profile by hand before anything about you is shared publicly — nothing goes out until that's done. This won't slow down the rest of your onboarding.</p>
+    </div>
+
+    <p class="completion-line" id="completion-line"></p>
+
+    <details class="tsv-details">
+      <summary>Show raw data row (for our records)</summary>
+      <div class="field">
+        <label for="tsv-output">TSV row — 36 columns, matching the spreadsheet format</label>
+        <textarea id="tsv-output" readonly rows="4"></textarea>
+        <button type="button" id="copy-btn" class="btn-secondary">Copy to clipboard</button>
+        <span id="copy-status" class="copy-status" aria-live="polite"></span>
+      </div>
+    </details>
+
+    <p id="save-status" class="save-status" aria-live="polite"></p>
+  </section>
+</div>
+
+<script src="../shared/apocomm-config.js"></script>
+<script src="../shared/apocomm-common.js"></script>
+<script src="../shared/apocomm-backend.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
