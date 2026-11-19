@@ -9,8 +9,8 @@ text area.
 
 | File | Purpose |
 |---|---|
-| `apocomm_backend.gs` | The `doGet` Web App: the seven actions the five tools call. |
-| `apocomm_reminder.gs` | Monthly trigger that emails each client their intake link. |
+| `apocomm_backend.gs` | The `doGet` Web App: the eight actions the six tools call. |
+| `apocomm_reminder.gs` | Monthly trigger that emails each client their intake link and their client-space link. |
 
 ## Deploying a change
 
@@ -42,3 +42,22 @@ Two things must agree across the boundary, or the system fails quietly:
 - **The 11-value intake row order** in `saveIntake()` and
   `ApoComm.BACKEND_INTAKE_COLUMNS`. They are positional, with no header
   lookup on either side.
+- **`SEARCH_MIN_CHARS`** here and `ApoComm.SEARCH_MIN_CHARS` in
+  `shared/apocomm-common.js`. If the frontend's is the lower of the two, the
+  backend silently returns nothing for queries the frontend was willing to
+  send.
+
+## Access tokens
+
+`Access_Tokens` (ClientID, Token, Created) is what the client space at
+`/espace/` authenticates against, and `getOrCreateTokensSheet()` creates it
+on first use. A token is minted at signup by `registerClient` and emailed;
+`sendMonthlyIntakeReminders()` mints one for any active client who still has
+none, which is how clients who registered before the space existed get in.
+
+**Every row in this tab is a live credential**, and `resolveToken()` matches
+any of them, so a client with several rows has several working links. That
+is why the reminder reuses an existing token rather than minting monthly.
+**Revoking someone's access means deleting their row(s) here** — there is no
+expiry and no other revocation path. Deleting a row cannot be undone: the
+next reminder will mint that client a new token and email it to them.

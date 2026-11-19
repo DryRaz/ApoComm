@@ -357,6 +357,30 @@ function createAccessToken(clientId) {
   return token;
 }
 
+/* ClientID -> token, in one pass over Access_Tokens.
+ *
+ * The monthly reminder loops over every client and needs each one's token;
+ * resolveToken() re-reads the whole sheet per call, which would turn one
+ * monthly run into N full-sheet reads. Read once, look up in memory.
+ *
+ * The FIRST token wins where a client somehow holds several. This is what
+ * keeps the reminder from minting a fresh token every month: every token
+ * ever issued stays valid (resolveToken() matches any row), so a client who
+ * got a new one each month would accumulate a dozen live links, and none of
+ * the old emails would ever stop working. Reusing the existing one means a
+ * client has exactly one link, from signup to whenever a human revokes it by
+ * deleting the row.
+ */
+function accessTokensByClient() {
+  const data = getOrCreateTokensSheet().getDataRange().getValues();
+  const map = {};
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][0]);
+    if (id && !map[id]) map[id] = String(data[i][1]);
+  }
+  return map;
+}
+
 function resolveToken(token) {
   const t = String(token || '').trim();
   if (t.length < 16) return null; // too short to be one of ours; don't scan
