@@ -63,8 +63,18 @@
       </div>
 
       <div class="field">
-        <label for="PrimaryLanguage">What language do you mainly communicate in? <span class="tag-required">required</span></label>
-        <input type="text" id="PrimaryLanguage" name="PrimaryLanguage" required>
+        <span class="group-label" id="PrimaryLanguage-label">Which language should we write in for you? <span class="tag-required">required</span></span>
+        <div class="lang-choice" role="radiogroup" aria-labelledby="PrimaryLanguage-label">
+          <label class="lang-option">
+            <input type="radio" name="PrimaryLanguage" value="English" required>
+            <span>English</span>
+          </label>
+          <label class="lang-option">
+            <input type="radio" name="PrimaryLanguage" value="French" required>
+            <span>Français</span>
+          </label>
+        </div>
+        <p class="hint">This sets the language of your newsletter, your social posts and your public page. We can change it later.</p>
         <p class="error" data-error-for="PrimaryLanguage"></p>
       </div>
 

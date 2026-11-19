@@ -428,6 +428,44 @@
   // Bold full-width typographic statement rather than the earlier
   // pin-icon line — same allow-gating as before, byte-for-byte: if
   // neither field is permitted, the section is omitted entirely.
+  // Every visible label on the generated public page. The page is the
+  // missionary's own, read by their partners, so it has to be in their
+  // language — this tool previously had no localization at all and shipped
+  // "About Me" / "Partner With Me" onto French pages. Two languages only
+  // (see ApoComm.detectLanguage): anything that is not French gets English.
+  var SITE_TEXT = {
+    english: {
+      htmlLang: "en",
+      mark: function (firstName) { return "Apostello Comm &times; " + firstName + "&#39;s Site"; },
+      contact: "Get in touch",
+      about: "About Me",
+      sentBy: function (org) { return "Sent by " + org; },
+      where: "Where I Serve",
+      ctaLabel: "Get Involved",
+      ctaFallback: "Partner with me",
+      ctaButton: "Partner With Me",
+      footer: "Site generated with Apostello Comm"
+    },
+    french: {
+      htmlLang: "fr",
+      // No possessive: "le site de Claire" reads as agency copy, and the
+      // English "'s" construction has no clean French equivalent here.
+      mark: function (firstName) { return firstName + " &middot; Apostello Comm"; },
+      contact: "Me contacter",
+      about: "Qui je suis",
+      sentBy: function (org) { return "Envoyé par " + org; },
+      where: "Où je sers",
+      ctaLabel: "S'engager à mes côtés",
+      ctaFallback: "Soutenez ma mission",
+      ctaButton: "Devenir partenaire",
+      footer: "Site réalisé avec Apostello Comm"
+    }
+  };
+
+  function siteText(fields) {
+    return SITE_TEXT[ApoComm.detectLanguage(fields.PrimaryLanguage)] || SITE_TEXT.english;
+  }
+
   function buildWhereSection(fields, security) {
     if (!security.allowCountry && !security.allowCity) return "";
     var parts = [];
@@ -436,7 +474,7 @@
     if (parts.length === 0) return "";
     return (
       '<section class="statement">\n' +
-      '  <p class="statement-label">Where I Serve</p>\n' +
+      '  <p class="statement-label">' + siteText(fields).where + "</p>\n" +
       '  <h2 class="statement-text">' + parts.join(", ") + "</h2>\n" +
       "</section>"
     );
@@ -492,6 +530,7 @@
     var objectiveFirstPerson = toFirstPerson(fields.MainObjective, fields.FirstName, fields.LastName, fields.PrimaryLanguage);
     var hook = escapeHtml(hookLine(summaryFirstPerson));
     var mailHref = "mailto:" + encodeURIComponent(fields.Email).replace(/%40/g, "@");
+    var T = siteText(fields);
 
     var whereSection = buildWhereSection(fields, security);
 
@@ -507,8 +546,8 @@
       "    " + heroPhoto.replace(/\n/g, "\n    ") + "\n" +
       "  </div>\n" +
       '  <div class="hero-top">\n' +
-      '    <span class="mark">Apostello Comm &times; ' + escapeHtml(firstName) + "&#39;s Site</span>\n" +
-      '    <a class="pill pill-solid" href="' + mailHref + '">Get in touch</a>\n' +
+      '    <span class="mark">' + T.mark(escapeHtml(firstName)) + "</span>\n" +
+      '    <a class="pill pill-solid" href="' + mailHref + '">' + T.contact + "</a>\n" +
       "  </div>\n" +
       '  <div class="hero-content">\n' +
       (fields.MinistryType ? '    <p class="eyebrow">' + escapeHtml(fields.MinistryType) + "</p>\n" : "") +
@@ -525,10 +564,10 @@
       "    " + aboutPhoto.replace(/\n/g, "\n    ") + "\n" +
       "  </div>\n" +
       '  <div class="split-block sage">\n' +
-      "    <h2>About Me</h2>\n" +
+      "    <h2>" + T.about + "</h2>\n" +
       "    <p>" + escapeHtml(summaryFirstPerson) + "</p>\n" +
       (fields.SendingOrganization
-        ? '    <p class="sent-by">Sent by ' + escapeHtml(fields.SendingOrganization) + "</p>\n"
+        ? '    <p class="sent-by">' + T.sentBy(escapeHtml(fields.SendingOrganization)) + "</p>\n"
         : "") +
       "  </div>\n" +
       "</section>";
@@ -538,14 +577,14 @@
     // raw visible email text.
     var ctaSection =
       '<section class="cta-section">\n' +
-      '  <p class="cta-label">Get Involved</p>\n' +
-      '  <h2 class="cta-headline">' + (objectiveFirstPerson ? escapeHtml(objectiveFirstPerson) : "Partner with me") + "</h2>\n" +
-      '  <a class="pill pill-dark" href="' + mailHref + '">Partner With Me</a>\n' +
+      '  <p class="cta-label">' + T.ctaLabel + "</p>\n" +
+      '  <h2 class="cta-headline">' + (objectiveFirstPerson ? escapeHtml(objectiveFirstPerson) : T.ctaFallback) + "</h2>\n" +
+      '  <a class="pill pill-dark" href="' + mailHref + '">' + T.ctaButton + "</a>\n" +
       "</section>";
 
     return (
       "<!DOCTYPE html>\n" +
-      '<html lang="en">\n' +
+      '<html lang="' + T.htmlLang + '">\n' +
       "<head>\n" +
       '<meta charset="UTF-8">\n' +
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
@@ -563,7 +602,7 @@
       "  " + ctaSection.replace(/\n/g, "\n  ") + "\n" +
       "</main>\n" +
       '<footer class="site-footer">\n' +
-      "  <p>Site generated with Apostello Comm</p>\n" +
+      "  <p>" + T.footer + "</p>\n" +
       "</footer>\n" +
       "</body>\n" +
       "</html>\n"

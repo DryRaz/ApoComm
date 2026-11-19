@@ -29,9 +29,7 @@
 
   var MONTHS = {
     english: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    french: ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
-    spanish: ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
-    portuguese: ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+    french: ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
   };
 
   var TEMPLATES = {
@@ -84,56 +82,6 @@
       ctaPrint: "Je vous enverrai bientôt la version imprimée dans votre boîte aux lettres.",
       ctaWebsite: "Visitez mon site pour en savoir plus.",
       signoff: "Avec gratitude,"
-    },
-    spanish: {
-      subjectFirst: function (name) { return "Conoce a " + name + " — Mi primera actualización"; },
-      subjectMonthly: function (name, month, year) { return "Actualización de " + name + " — " + month + " " + year; },
-      introDetailed: function (summary, dateStr) {
-        return "¡Te doy la bienvenida a mi primera actualización! " + summary + " Comencé esta etapa el " + dateStr + ".";
-      },
-      introGeneric: function () {
-        return "Te doy la bienvenida a mi primera actualización — compartiré más cada mes.";
-      },
-      highlightsLabel: "Lo más destacado del mes:",
-      prayerLabel: "Peticiones de oración:",
-      lookingAheadLabel: "Lo que viene:",
-      numbersLabel: "En números:",
-      ctaLead: "Así es como puedes acompañarme:",
-      ctaGeneric: "Me encantaría saber de ti.",
-      ctaEmail: "Simplemente responde a este correo — me encantaría saber de ti.",
-      ctaWhatsApp: function (phone) { return "Escríbeme por WhatsApp al " + phone + "."; },
-      ctaWhatsAppNoPhone: "Escríbeme por WhatsApp.",
-      ctaInstagram: "Sígueme en Instagram.",
-      ctaFacebook: "Conéctate conmigo en Facebook.",
-      ctaYouTube: "Suscríbete a mi canal de YouTube para más novedades.",
-      ctaPrint: "Pronto te enviaré la edición impresa a tu buzón.",
-      ctaWebsite: "Visita mi sitio web para más información.",
-      signoff: "Con gratitud,"
-    },
-    portuguese: {
-      subjectFirst: function (name) { return "Conheça " + name + " — Minha primeira atualização"; },
-      subjectMonthly: function (name, month, year) { return "Atualização de " + name + " — " + month + " " + year; },
-      introDetailed: function (summary, dateStr) {
-        return "Seja bem-vindo à minha primeira atualização! " + summary + " Comecei esta etapa em " + dateStr + ".";
-      },
-      introGeneric: function () {
-        return "Seja bem-vindo à minha primeira atualização — mais novidades a cada mês.";
-      },
-      highlightsLabel: "Os destaques do mês:",
-      prayerLabel: "Pedidos de oração:",
-      lookingAheadLabel: "O que vem por aí:",
-      numbersLabel: "Em números:",
-      ctaLead: "Veja como você pode me apoiar:",
-      ctaGeneric: "Adoraria ouvir de você.",
-      ctaEmail: "Basta responder a este e-mail — adoraria ouvir de você.",
-      ctaWhatsApp: function (phone) { return "Me chame no WhatsApp em " + phone + "."; },
-      ctaWhatsAppNoPhone: "Me chame no WhatsApp.",
-      ctaInstagram: "Acompanhe-me no Instagram.",
-      ctaFacebook: "Conecte-se comigo no Facebook.",
-      ctaYouTube: "Inscreva-se no meu canal do YouTube para mais novidades.",
-      ctaPrint: "Fique de olho na sua caixa de correio — enviarei a edição impressa também.",
-      ctaWebsite: "Visite meu site para saber mais.",
-      signoff: "Com gratidão,"
     }
   };
 
@@ -231,74 +179,6 @@
         "Quand je compare la situation d'il y a quelques mois à aujourd'hui, ça me rappelle qu'un effort constant reste un effort, même quand il ne semble pas spectaculaire sur le moment.",
         "Je voulais que vous voyiez ce chiffre en particulier parce que vous en faites partie — votre soutien n'est pas anodin pour moi, il se traduit vraiment par ce genre de mouvement."
       ]
-    },
-    spanish: {
-      highlights: [
-        "Momentos como este son exactamente la razón por la que sigo adelante, incluso en los días más difíciles, porque me recuerdan que las pequeñas cosas cotidianas realmente van sumando algo real.",
-        "Una sola frase en una actualización como esta puede pasar desapercibida fácilmente, pero quise detenerme y prestarle atención, porque significó para mí mucho más de lo que parece en el papel.",
-        "Nunca sé de antemano qué momentos terminarán quedándose conmigo, y eso es parte de lo que hace este trabajo tan impredecible y tan valioso a la vez.",
-        "Quise que fueras parte de esto, no solo leyéndolo después, sino sabiendo que realmente formas parte de cómo fue posible.",
-        "Nada de esto ocurre en el vacío, y siempre soy consciente de que las personas que me respaldan —orando, dando, preguntando por mí— son parte de momentos como este tanto como yo.",
-        "Así que gracias por ser una de esas personas. No lo doy por sentado, y espero que esta pequeña ventana a mi mes te acerque un poco más a lo que realmente vivo aquí."
-      ],
-      prayer: [
-        "Trato de no compartir solo las partes que se ven bien desde afuera, porque la verdad es que este trabajo tiene un peso real, y no quiero tratarte como si no pudieras escucharlo.",
-        "Compartir una necesidad como esta no siempre es fácil para mí, pero prefiero ser honesto contigo antes que fingir una versión de esta vida que no sea del todo real.",
-        "Creo que la oración cambia las cosas de maneras que no siempre puedo ver de inmediato, y prefiero pedirla demasiado pronto que lamentar después no haberlo dicho.",
-        "Es el tipo de cosa en la que pienso a horas extrañas, y me ayuda saber que no la cargo solo, que hay personas sosteniéndola conmigo aunque estén lejos.",
-        "No necesitas conocer cada detalle de lo que enfrento para orar bien por mí — con saber que está en mi corazón basta para que lleves una parte de ello también.",
-        "Así que si piensas en mí en los próximos días, esto es lo que ocupa mi mente, y estoy profundamente agradecido de no tener que cargarlo solo."
-      ],
-      looking_ahead: [
-        "No siempre sé exactamente cómo se van a desarrollar las cosas, pero prefiero contártelo ahora en lugar de solo después de que ya haya pasado.",
-        "Compartir lo que viene es, honestamente, un poco vulnerable — los planes cambian, los tiempos se mueven, y prefiero ser transparente sobre lo que espero en lugar de aparentar que tengo todo resuelto.",
-        "Parte de por qué me gusta compartir lo que viene, no solo lo que ya pasó, es que te da la oportunidad de pensarlo y orar por ello antes, no solo escuchar el resumen después.",
-        "He aprendido que el espacio entre planear algo y realmente hacerlo es donde ocurre gran parte del trabajo real, aunque desde afuera todavía no se note mucho.",
-        "Si alguna vez esperaste algo cuyo tiempo no podías controlar del todo, entenderás un poco lo que se siente esta temporada para mí.",
-        "Te mantendré al tanto a medida que esto avance — por ahora, solo quería que fueras de los primeros en saberlo."
-      ],
-      numbers: [
-        "Sé que un número como este puede parecer pequeño a primera vista, pero detrás de cada cifra hay una conversación real, una relación real, un paso real que tomó tiempo y confianza.",
-        "Es tentador celebrar solo los grandes hitos dramáticos, pero he aprendido a valorar cuánto de este trabajo ocurre en realidad en pasos más pequeños y constantes.",
-        "Quiero ser honesto: el progreso aquí no siempre avanza en línea recta, y prefiero darte el número real, modesto, en lugar de exagerarlo.",
-        "Cada pequeño movimiento como este representa a personas diciendo que sí, a su manera, y no creo que eso deba tratarse nunca como algo ordinario.",
-        "Cuando comparo cómo estaban las cosas hace unos meses con ahora, me recuerda que el esfuerzo constante sigue siendo esfuerzo, aunque no se sienta dramático en el momento.",
-        "Quise que vieras este número en particular porque eres parte de él — tu apoyo no es ruido de fondo para mí, realmente se refleja en movimiento como este."
-      ]
-    },
-    portuguese: {
-      highlights: [
-        "Momentos como este são exatamente o motivo pelo qual eu continuo, mesmo nos dias mais difíceis, porque me lembram que as pequenas coisas do cotidiano realmente vão somando algo real.",
-        "Uma única frase em uma atualização como esta pode passar despercebida facilmente, mas eu quis parar e prestar atenção nela, porque significou para mim muito mais do que parece no papel.",
-        "Eu nunca sei de antemão quais momentos vão ficar comigo, e isso é parte do que torna este trabalho tão imprevisível e tão valioso ao mesmo tempo.",
-        "Eu quis que você fizesse parte disso, não só lendo depois, mas sabendo que você realmente faz parte de como isso foi possível.",
-        "Nada disso acontece no vazio, e eu sempre sei que as pessoas que me apoiam — orando, doando, perguntando por mim — fazem parte de momentos como este tanto quanto eu.",
-        "Então obrigado por ser uma dessas pessoas. Eu não considero isso garantido, e espero que essa pequena janela para o meu mês te aproxime um pouco mais do que realmente vivo aqui."
-      ],
-      prayer: [
-        "Eu tento não compartilhar só as partes que parecem boas de fora, porque a verdade é que este trabalho tem um peso real, e eu não quero tratar você como se não pudesse ouvir isso.",
-        "Compartilhar uma necessidade como esta nem sempre é fácil para mim, mas prefiro ser honesto com você do que fingir uma versão desta vida que não seja bem real.",
-        "Eu acredito que a oração muda as coisas de formas que nem sempre consigo ver de imediato, e prefiro pedir cedo demais do que me arrepender depois de não ter dito nada.",
-        "É o tipo de coisa em que penso em horários estranhos, e me ajuda saber que não carrego isso sozinho, que há pessoas segurando isso comigo mesmo à distância.",
-        "Você não precisa conhecer cada detalhe do que estou enfrentando para orar bem por mim — só de saber que está no meu coração já é o suficiente para você carregar um pedaço também.",
-        "Então, se você pensar em mim nos próximos dias, é nisso que minha mente continua voltando, e sou profundamente grato por não ter que carregar isso sozinho."
-      ],
-      looking_ahead: [
-        "Nem sempre sei exatamente como as coisas vão se desenrolar, mas prefiro te contar agora em vez de só depois que já tiver acontecido.",
-        "Compartilhar o que vem pela frente é, sinceramente, um pouco vulnerável — os planos mudam, os prazos se movem, e prefiro ser transparente sobre o que espero em vez de fingir que já tenho tudo resolvido.",
-        "Parte do motivo de eu gostar de compartilhar o que vem, não só o que já aconteceu, é que isso te dá a chance de pensar e orar sobre isso antes, não só ouvir o resumo depois.",
-        "Aprendi que o espaço entre planejar algo e realmente fazer é onde acontece boa parte do trabalho de verdade, mesmo quando ainda não parece muito por fora.",
-        "Se você já esperou por algo cujo tempo não podia controlar totalmente, entende um pouco o que essa temporada é para mim.",
-        "Vou te manter informado conforme isso avança — por enquanto, só queria que você fosse um dos primeiros a saber."
-      ],
-      numbers: [
-        "Eu sei que um número como este pode parecer pequeno à primeira vista, mas por trás de cada número há uma conversa real, um relacionamento real, um passo real que levou tempo e confiança.",
-        "É tentador celebrar só os grandes marcos dramáticos, mas aprendi a valorizar o quanto deste trabalho realmente acontece em passos menores e mais constantes.",
-        "Quero ser honesto: o progresso aqui nem sempre avança em linha reta, e prefiro te dar o número real, modesto, em vez de exagerá-lo.",
-        "Cada pequeno movimento como este representa pessoas dizendo sim, do seu próprio jeito, e eu não acho que isso deva ser tratado como algo comum.",
-        "Quando comparo como as coisas estavam há alguns meses com agora, isso me lembra que esforço constante ainda é esforço, mesmo quando não parece dramático no momento.",
-        "Eu quis que você visse esse número especificamente porque você faz parte dele — seu apoio não é ruído de fundo para mim, ele realmente aparece em movimento como este."
-      ]
     }
   };
 
@@ -317,16 +197,6 @@
       highlights: ["En plus de ça : ", "À peu près au même moment : ", "Je veux aussi vous parler de ceci : ", "Et peut-être le plus marquant : ", "Il y a aussi ceci : ", "Une dernière chose à partager : "],
       prayer: ["Je veux aussi vous demander de prier pour ceci : ", "Autre chose que je porte : ", "Et un autre besoin : ", "En plus de ça : ", "Il y a aussi ceci : ", "Une dernière chose pour laquelle j'aimerais de la prière : "],
       looking_ahead: ["Je pense aussi à ceci : ", "Autre chose à venir : ", "Et plus loin encore : ", "Autre chose à l'horizon : ", "Il y a aussi ceci : ", "Une dernière chose que j'anticipe : "]
-    },
-    spanish: {
-      highlights: ["Además de eso: ", "Casi al mismo tiempo: ", "También quiero contarte esto: ", "Y quizás lo más memorable: ", "También está esto: ", "Una última cosa que compartir: "],
-      prayer: ["También quiero pedir oración por esto: ", "Otra cosa que estoy cargando: ", "Y otra necesidad más: ", "Además de eso: ", "También está esto: ", "Una última cosa por la que me encantaría oración: "],
-      looking_ahead: ["También estoy pensando en esto: ", "Otra cosa que se viene: ", "Y más adelante: ", "Otra cosa en el horizonte: ", "También está esto: ", "Una última cosa que anticipo: "]
-    },
-    portuguese: {
-      highlights: ["Além disso: ", "Quase ao mesmo tempo: ", "Também quero te contar isso: ", "E talvez o mais marcante: ", "Também tem isso: ", "Mais uma coisa para compartilhar: "],
-      prayer: ["Também quero pedir oração por isso: ", "Outra coisa que estou carregando: ", "E mais uma necessidade: ", "Além disso: ", "Também tem isso: ", "Mais uma coisa pela qual adoraria oração: "],
-      looking_ahead: ["Também estou pensando nisso: ", "Outra coisa que vem por aí: ", "E mais à frente: ", "Outra coisa no horizonte: ", "Também tem isso: ", "Mais uma coisa que estou esperando: "]
     }
   };
 

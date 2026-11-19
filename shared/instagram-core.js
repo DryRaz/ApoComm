@@ -115,52 +115,57 @@
         educational: function (s) { return "Something worth understanding about this season: " + s + " Needs like this are a completely normal part of a life like mine, even when my updates tend to lean toward the highlights — I wanted to give you the fuller picture."; },
         quote_stat: function (s) { return s; }
       }
-    }
-  };
-
-  // French/Spanish/Portuguese use one generic template per format, shared
-  // across all three topics — same non-fabrication guarantee, less
-  // topic-specific nuance than English. Scoped this way to keep the
-  // template set maintainable; extend to per-topic wording if needed.
-  var GENERIC_TEMPLATES = {
+    },
+    // French now carries the same per-category set as English, rather
+    // than the one-generic-template-per-format fallback it had before:
+    // four Events in a month used to open with four copies of the same
+    // framing sentence in French while English got four distinct angles.
+    // Same non-fabrication guarantee — the missionary's own sentence is
+    // wrapped, never rewritten, and no template adds a fact, a figure,
+    // a name or a date.
     french: {
-      viral: function (s) { return "Il faut que je vous raconte ça : " + s + " Je souris encore rien qu'en y repensant, et je voulais que vous soyez parmi les premiers à le savoir."; },
-      educational: function (s) { return "Un petit aparté que je n'explique pas toujours : " + s + " Ce genre de moment fait partie du quotidien ici, même si ça ne ressemble pas toujours à un grand plan bien organisé."; },
-      pov: function (s) { return "Imaginez un instant à ma place : " + s + " Voilà exactement ce que ça m'a fait, et je voulais vous y emmener plutôt que de simplement vous le raconter après coup."; },
-      quote_stat: function (s) { return s; },
-      bts: function (s) { return "Voici ce qu'on ne voit pas d'habitude : " + s + " Il y a eu beaucoup de préparation discrète derrière ce moment, et je trouve que ça mérite d'être partagé aussi."; },
-      prayer_focused: function (s) { return "Je veux être honnête avec vous sur ce que je porte en ce moment : " + s + " Est-ce que vous accepteriez de vous arrêter et de prier avec moi pour ça, maintenant si possible ?"; },
-      engagement: function (s) { return s + " Et vous — est-ce que ça vous est déjà arrivé de vivre quelque chose de similaire ? Dites-le-moi en commentaire."; }
-    },
-    spanish: {
-      viral: function (s) { return "Tengo que contarte esto: " + s + " Todavía sonrío al pensarlo, y quería que fueras de los primeros en saberlo."; },
-      educational: function (s) { return "Algo que no siempre explico bien: " + s + " Momentos así son parte normal del día a día aquí, aunque no siempre se vea como un gran plan organizado."; },
-      pov: function (s) { return "Imagínate por un momento en mi lugar: " + s + " Así es exactamente como se sintió, y quise traerte a ese momento en lugar de solo contártelo después."; },
-      quote_stat: function (s) { return s; },
-      bts: function (s) { return "Esto es lo que normalmente no se ve: " + s + " Detrás de ese momento hubo mucha preparación silenciosa, y creo que también vale la pena compartirla."; },
-      prayer_focused: function (s) { return "Quiero ser honesto contigo sobre algo que estoy cargando ahora mismo: " + s + " ¿Podrías detenerte a orar por esto conmigo, ahora si es posible?"; },
-      engagement: function (s) { return s + " ¿Y tú? ¿Alguna vez te ha pasado algo parecido? Cuéntamelo en los comentarios."; }
-    },
-    portuguese: {
-      viral: function (s) { return "Preciso te contar isso: " + s + " Ainda sorrio só de lembrar, e quis que você fosse um dos primeiros a saber."; },
-      educational: function (s) { return "Algo que nem sempre explico bem: " + s + " Momentos assim fazem parte do dia a dia por aqui, mesmo que não pareçam um grande plano organizado."; },
-      pov: function (s) { return "Imagine por um instante no meu lugar: " + s + " Foi exatamente assim que pareceu, e eu quis te trazer para esse momento em vez de só contar depois."; },
-      quote_stat: function (s) { return s; },
-      bts: function (s) { return "Aqui está o que normalmente não aparece: " + s + " Houve muita preparação silenciosa por trás desse momento, e acho que isso também merece ser compartilhado."; },
-      prayer_focused: function (s) { return "Quero ser honesto com você sobre algo que estou carregando agora: " + s + " Você pararia para orar comigo por isso, agora se possível?"; },
-      engagement: function (s) { return s + " E você? Já viveu algo parecido? Me conta nos comentários."; }
+      highlights: {
+        viral: function (s) { return "Il faut vraiment que je vous raconte celle-là. " + s + " J'en souris encore, et je voulais que vous soyez parmi les premiers à le savoir."; },
+        educational: function (s) { return "Quelque chose que j'explique rarement dans mes nouvelles : " + s + " Ce genre de moment, c'est en réalité le quotidien ici — moins les grands plans que le fait d'être présent, régulièrement."; },
+        pov: function (s) { return "Imaginez la scène avec moi un instant : " + s + " Maintenant, mettez-vous juste à côté de moi à cet instant précis — c'est exactement ce que ça faisait, et je préférais vous y emmener plutôt que de vous le raconter après coup."; },
+        quote_stat: function (s) { return s; },
+        bts: function (s) { return "Voici la partie qu'on ne montre pas d'habitude : " + s + " Derrière ce moment, il y a eu beaucoup de préparation sans éclat — l'installation, la logistique, l'attente — et je trouve que ça mérite d'être partagé autant que le reste."; },
+        engagement: function (s) { return s + " Et vous, est-ce qu'une petite chose comme celle-là a déjà fini par compter bien plus que prévu ? Racontez-moi en commentaire."; }
+      },
+      looking_ahead: {
+        educational: function (s) { return "Quelque chose que je prends rarement le temps d'expliquer : " + s + " J'aime vous annoncer ce qui arrive, pas seulement vous résumer ce qui s'est passé : vous pouvez en faire partie pendant que ça se construit, au lieu de l'apprendre une fois terminé."; },
+        engagement: function (s) { return s + " Et vous, qu'est-ce que vous attendez avec impatience en ce moment ? Dites-le-moi en commentaire."; },
+        viral: function (s) { return "Il faut que je vous dise ce qui arrive. " + s + " J'ai hâte, et un peu le trac, et je voulais que vous le sachiez avant, pas seulement après."; },
+        pov: function (s) { return "Imaginez la scène avec moi un instant : " + s + " Je ne sais pas encore comment ça va se passer, mais je voulais vous faire vivre l'attente avec moi plutôt que de vous donner seulement le résultat plus tard."; },
+        bts: function (s) { return "Voici ce que personne ne voit encore : " + s + " Pour l'instant, c'est surtout de la préparation, de la logistique et beaucoup de petites décisions en coulisses — rien de photogénique, mais c'est du vrai travail."; },
+        quote_stat: function (s) { return s; }
+      },
+      numbers: {
+        viral: function (s) { return "Un chiffre que je ne pensais pas partager si tôt : " + s + " C'est un petit jalon, mais il est réel, et je voulais que vous le voyiez avant qu'il ne devienne une ligne dans un tableau."; },
+        educational: function (s) { return "Un mot sur ce qu'il y a derrière ces chiffres : " + s + " Des nombres comme ceux-là représentent surtout beaucoup de conversations et de petites décisions accumulées dans le temps, pas un grand coup d'éclat — ça vaut la peine de le savoir si vous n'avez jamais vécu ça de l'intérieur."; },
+        pov: function (s) { return "Imaginez recevoir la nouvelle que j'ai reçue récemment : " + s + " C'est ce moment-là que je partage avec vous aujourd'hui — pas une grande annonce, juste quelque chose de discret et de vrai."; },
+        quote_stat: function (s) { return s; },
+        bts: function (s) { return "Quelque chose qui n'apparaît presque jamais dans mes nouvelles : " + s + " Derrière un chiffre pareil, il y a beaucoup de suivi discret et ordinaire — des messages, des conversations, des petites prises de nouvelles qui ne font pas de belles photos mais qui changent tout."; },
+        engagement: function (s) { return s + " Les chiffres comme celui-là me rendent curieux : la dernière fois que des efforts réguliers et sans éclat ont fini par payer chez vous, c'était quand ? J'aimerais le lire."; }
+      },
+      prayer: {
+        prayer_focused: function (s) { return "Je veux être honnête avec vous sur ce que je porte en ce moment : " + s + " Je ne publie pas ça pour qu'on le regarde de loin — est-ce que vous accepteriez de vous arrêter et de prier avec moi, maintenant si vous le pouvez ?"; },
+        engagement: function (s) { return s + " Si vous êtes de ceux qui prient, c'est vraiment là que j'en ai le plus besoin cette semaine. Écrivez « je prie » en commentaire, que je sache que je ne porte pas ça seul."; },
+        bts: function (s) { return "Tout ce que je publie n'est pas un temps fort — voici quelque chose de plus proche de ce à quoi ressemble vraiment une soirée ordinaire pour moi en ce moment : " + s + " Je ne sais pas toujours comment présenter ça joliment, alors je vous le dis simplement."; },
+        pov: function (s) { return "Un instant, asseyez-vous là où je suis assis : " + s + " C'est vraiment ce que j'ai en tête en ce moment, et je voulais que vous y soyez avec moi plutôt que de l'apprendre une fois que ce sera réglé."; },
+        viral: function (s) { return "Ce n'est pas ce que je mets en avant d'habitude, mais : " + s + " Je préfère être honnête avec vous plutôt que de ne montrer que les bons moments — si vous pouvez porter ça avec moi, ça compte vraiment."; },
+        educational: function (s) { return "Quelque chose qu'il vaut la peine de comprendre sur cette période : " + s + " Des besoins comme celui-là font complètement partie d'une vie comme la mienne, même si mes nouvelles penchent souvent vers les belles choses — je voulais vous donner le tableau complet."; },
+        quote_stat: function (s) { return s; }
+      }
     }
   };
 
+  // `meetings` is a single rollup stat like `numbers`, so it reuses that
+  // category's templates rather than duplicating a near-identical set.
   function getCaption(lang, category, format, seed) {
-    // `meetings` reuses the `numbers` English template set (see
-    // CATEGORY_LABEL comment); the generic FR/ES/PT templates are
-    // format-keyed only, so no mapping is needed for those.
-    if (lang === "english") {
-      var templateCategory = category === "meetings" ? "numbers" : category;
-      return TEMPLATES.english[templateCategory][format](seed);
-    }
-    return GENERIC_TEMPLATES[lang][format](seed);
+    var set = TEMPLATES[lang] || TEMPLATES.english;
+    var templateCategory = category === "meetings" ? "numbers" : category;
+    return set[templateCategory][format](seed);
   }
 
   var HASHTAG_BANK = {

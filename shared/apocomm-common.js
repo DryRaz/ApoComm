@@ -345,26 +345,31 @@
     return result;
   };
 
-  // PrimaryLanguage is a free-text field on a form written in English, so
-  // the value that actually arrives is usually the English name of the
-  // language ("French"), sometimes the endonym ("Français"), sometimes an
-  // ISO code ("fr", "fr-FR"). The old test only matched the endonym stem
-  // "fran", so "French" fell through to English and a francophone
-  // missionary got an English newsletter wrapped around French sentences.
+  // Two languages, deliberately: French and English. Spanish and
+  // Portuguese were half-supported — full newsletter chrome but only a
+  // generic one-template-per-format Instagram set — which is worse than
+  // not offering them, so they were removed rather than left to look
+  // finished. Anything that is not French resolves to English, including
+  // a language this agency does not serve.
+  //
+  // The registration form now offers a two-way choice rather than a free
+  // text field (see admin/registration), so in practice the value is
+  // "French" or "English". The looser matching below stays for rows
+  // written before that change, and for anything typed into the Sheet by
+  // hand: the English name, the endonym, and ISO codes with or without a
+  // region all resolve. (This previously tested only the endonym stem
+  // "fran", so "French" — the value an English-language form actually
+  // collects — fell through to English.)
   ApoComm.detectLanguage = function (primaryLanguage) {
     var v = (primaryLanguage || "").trim().toLowerCase();
     if (!v) return "english";
-    var code = v.split(/[-_]/)[0];
-    if (code === "fr") return "french";
-    if (code === "es" || code === "ca") return "spanish";
-    if (code === "pt") return "portuguese";
-    if (code === "en") return "english";
-    if (/fren|fran[cç]|french/.test(v)) return "french";
-    if (/span|espan|españ|castell/.test(v)) return "spanish";
-    if (/portug|portugu/.test(v)) return "portuguese";
-    if (/engl|angl|ingl/.test(v)) return "english";
+    if (v.split(/[-_]/)[0] === "fr") return "french";
+    if (/fren|fran[cç]/.test(v)) return "french";
     return "english";
   };
+
+  // The two values the rest of the codebase keys its dictionaries by.
+  ApoComm.LANGUAGES = ["english", "french"];
 
   ApoComm.escapeHtml = function (value) {
     return String(value == null ? "" : value)
