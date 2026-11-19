@@ -79,8 +79,50 @@
       </div>
 
       <div class="field">
-        <label for="Timezone">What time zone are you in?</label>
-        <input type="text" id="Timezone" name="Timezone" placeholder="e.g. UTC+2">
+        <label for="Timezone">Where are you, time-wise?</label>
+        <!-- A picker, not a free text box. "UTC+2" is how the Sheet stores
+             this, but almost nobody knows their own offset by heart, and
+             the old field collected things like "Kenya" that the stored
+             format does not accept. Options are labelled by country so a
+             missionary picks the line with their country in it; the value
+             submitted is still the UTC±X the Dictionnaire expects.
+             Standard offsets only — daylight saving is not modelled, and
+             this field only informs send/call scheduling. -->
+        <select id="Timezone" name="Timezone">
+          <option value="">Select the line with your country</option>
+          <option value="UTC-11">American Samoa, Niue (UTC-11)</option>
+          <option value="UTC-10">Hawaii, French Polynesia, Cook Islands (UTC-10)</option>
+          <option value="UTC-9">Alaska, Gambier Islands (UTC-9)</option>
+          <option value="UTC-8">Canada &amp; USA — Pacific (UTC-8)</option>
+          <option value="UTC-7">Canada &amp; USA — Mountain, north-west Mexico (UTC-7)</option>
+          <option value="UTC-6">Canada &amp; USA — Central, Mexico, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Belize (UTC-6)</option>
+          <option value="UTC-5">Canada &amp; USA — Eastern, Colombia, Peru, Ecuador, Panama, Cuba, Haiti, Jamaica (UTC-5)</option>
+          <option value="UTC-4">Bolivia, Venezuela, Chile, Paraguay, Dominican Republic, Guyana, Atlantic Canada (UTC-4)</option>
+          <option value="UTC-3">Brazil (east), Argentina, Uruguay, Suriname, French Guiana, Greenland (UTC-3)</option>
+          <option value="UTC-2">Fernando de Noronha, South Georgia (UTC-2)</option>
+          <option value="UTC-1">Cape Verde, Azores (UTC-1)</option>
+          <option value="UTC+0">United Kingdom, Ireland, Portugal, Iceland, Senegal, Mali, Ghana, Côte d'Ivoire, Burkina Faso, Guinea, Liberia, Sierra Leone, Togo, Gambia, Mauritania (UTC+0)</option>
+          <option value="UTC+1">France, Spain, Germany, Italy, Belgium, Switzerland, Netherlands, Poland, Nigeria, Niger, Chad, Cameroon, Benin, Gabon, Congo, DR Congo (west), Angola, Algeria, Tunisia, Morocco (UTC+1)</option>
+          <option value="UTC+2">Egypt, South Africa, Zimbabwe, Zambia, Malawi, Mozambique, Botswana, Namibia, Rwanda, Burundi, DR Congo (east), Sudan, Libya, Greece, Finland, Romania, Ukraine, Israel, Lebanon, Jordan (UTC+2)</option>
+          <option value="UTC+3">Kenya, Tanzania, Uganda, Ethiopia, Somalia, South Sudan, Eritrea, Djibouti, Madagascar, Comoros, Saudi Arabia, Iraq, Kuwait, Qatar, Bahrain, Yemen, Türkiye, Russia (Moscow) (UTC+3)</option>
+          <option value="UTC+3:30">Iran (UTC+3:30)</option>
+          <option value="UTC+4">United Arab Emirates, Oman, Georgia, Armenia, Azerbaijan, Mauritius, Seychelles, Réunion (UTC+4)</option>
+          <option value="UTC+4:30">Afghanistan (UTC+4:30)</option>
+          <option value="UTC+5">Pakistan, Uzbekistan, Turkmenistan, Tajikistan, Maldives, Kazakhstan (west) (UTC+5)</option>
+          <option value="UTC+5:30">India, Sri Lanka (UTC+5:30)</option>
+          <option value="UTC+5:45">Nepal (UTC+5:45)</option>
+          <option value="UTC+6">Bangladesh, Bhutan, Kyrgyzstan, Kazakhstan (east) (UTC+6)</option>
+          <option value="UTC+6:30">Myanmar, Cocos Islands (UTC+6:30)</option>
+          <option value="UTC+7">Thailand, Vietnam, Cambodia, Laos, Indonesia (west), Mongolia (west) (UTC+7)</option>
+          <option value="UTC+8">China, Philippines, Malaysia, Singapore, Taiwan, Hong Kong, Mongolia, Brunei, Indonesia (central), Australia (west) (UTC+8)</option>
+          <option value="UTC+9">Japan, South Korea, Timor-Leste, Palau, Indonesia (east) (UTC+9)</option>
+          <option value="UTC+9:30">Australia — Northern Territory, South Australia (UTC+9:30)</option>
+          <option value="UTC+10">Australia (east), Papua New Guinea, Guam, Micronesia (UTC+10)</option>
+          <option value="UTC+11">Solomon Islands, Vanuatu, New Caledonia (UTC+11)</option>
+          <option value="UTC+12">New Zealand, Fiji, Marshall Islands, Kiribati, Tuvalu (UTC+12)</option>
+          <option value="UTC+13">Samoa, Tonga (UTC+13)</option>
+        </select>
+        <p class="hint">Pick the line that names your country. This only sets when we schedule things for you.</p>
       </div>
     </fieldset>
 
