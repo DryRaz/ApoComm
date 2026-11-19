@@ -27,16 +27,32 @@
     "UpcomingProjects", "NumbersUpdate", "NewPhotoLinks", "AnythingToAvoid", "SubmissionDate"
   ];
 
-  // The backend's Monthly_Intakes row shape (11 values, per the saveIntake/
-  // getIntake contract) adds an explicit "Month" (YYYY-MM) column right
-  // after ClientID, alongside the 10 local INTAKE_COLUMNS — Month is what
-  // the backend indexes getIntake/listIntakeMonths by, distinct from the
-  // exact-day SubmissionDate. Derived automatically from SubmissionDate
-  // when writing; never shown to the user, never round-tripped through the
-  // local TSV cache (which stays 10 columns, unchanged).
+  // The backend's Monthly_Intakes row shape — 11 values, positional. The
+  // Apps Script appends the array it receives without consulting headers,
+  // so this order must match the sheet's own header row exactly:
+  //
+  //   ClientID | YearMonth | Timestamp | IsFirstNewsletter | Events |
+  //   MeetingsSummary | PrayerNeeds | UpcomingProjects | NumbersUpdate |
+  //   NewPhotoLinks | AnythingToAvoid
+  //
+  // "Month" (YYYY-MM, derived from SubmissionDate) is the sheet's
+  // YearMonth and is what getIntake/listIntakeMonths index by;
+  // SubmissionDate (the exact day) is the sheet's Timestamp, in third
+  // position — NOT appended at the end.
+  //
+  // This previously listed SubmissionDate last and omitted the Timestamp
+  // slot, so every value from column C onward was written one cell to the
+  // left: IsFirstNewsletter landed in Timestamp, Events in
+  // IsFirstNewsletter, and the submission date in AnythingToAvoid. The
+  // visible damage was that AnythingToAvoid always came back as a date
+  // when a past month was reloaded from the sheet — a missionary's
+  // "don't mention X" never reached the generator on a regeneration. The
+  // September 2026 row for APC-2026-011 was written in the old shape and
+  // needs repairing by hand; nothing here migrates it.
   ApoComm.BACKEND_INTAKE_COLUMNS = [
-    "ClientID", "Month", "IsFirstNewsletter", "Events", "MeetingsSummary", "PrayerNeeds",
-    "UpcomingProjects", "NumbersUpdate", "NewPhotoLinks", "AnythingToAvoid", "SubmissionDate"
+    "ClientID", "Month", "SubmissionDate", "IsFirstNewsletter", "Events",
+    "MeetingsSummary", "PrayerNeeds", "UpcomingProjects", "NumbersUpdate",
+    "NewPhotoLinks", "AnythingToAvoid"
   ];
 
   // Events/PrayerNeeds/UpcomingProjects are semicolon-joined lists (see
