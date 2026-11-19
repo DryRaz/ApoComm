@@ -404,7 +404,7 @@
     if (isFirst) {
       var introAllowed = security.allow.intro;
       if (introAllowed) {
-        var summaryFirstPerson = ApoComm.toFirstPerson(regFields.MissionSummary.trim(), regFields.FirstName, regFields.LastName);
+        var summaryFirstPerson = ApoComm.toFirstPerson(regFields.MissionSummary.trim(), regFields.FirstName, regFields.LastName, regFields.PrimaryLanguage);
         paragraphs.push(t.introDetailed(summaryFirstPerson, formatDate(regFields.DepartureDate, lang)));
       } else {
         paragraphs.push(t.introGeneric());
@@ -417,13 +417,13 @@
 
     function convertAll(rawList) {
       return ApoComm.splitList(rawList).map(function (item) {
-        return ApoComm.toFirstPerson(item, regFields.FirstName, regFields.LastName);
+        return ApoComm.toFirstPerson(item, regFields.FirstName, regFields.LastName, regFields.PrimaryLanguage);
       });
     }
 
     var eventItems = security.allow.highlights ? convertAll(intakeFields.Events) : [];
     var meetingsText = (security.allow.highlights && intakeFields.MeetingsSummary.trim())
-      ? ApoComm.toFirstPerson(intakeFields.MeetingsSummary.trim(), regFields.FirstName, regFields.LastName) : "";
+      ? ApoComm.toFirstPerson(intakeFields.MeetingsSummary.trim(), regFields.FirstName, regFields.LastName, regFields.PrimaryLanguage) : "";
     var highlightsSection = buildSection(eventItems, meetingsText, connectors.highlights, banks.highlights, MIN_EXPANSION_WORDS);
     if (highlightsSection) {
       paragraphs.push(t.highlightsLabel + "\n" + withFallbackNote(highlightsSection));
@@ -445,7 +445,7 @@
     }
 
     var numbersText = (security.allow.numbers && intakeFields.NumbersUpdate.trim())
-      ? ApoComm.toFirstPerson(intakeFields.NumbersUpdate.trim(), regFields.FirstName, regFields.LastName) : "";
+      ? ApoComm.toFirstPerson(intakeFields.NumbersUpdate.trim(), regFields.FirstName, regFields.LastName, regFields.PrimaryLanguage) : "";
     var numbersSection = buildSection([], numbersText, [], banks.numbers, MIN_EXPANSION_WORDS);
     if (numbersSection) {
       paragraphs.push(t.numbersLabel + "\n" + withFallbackNote(numbersSection));

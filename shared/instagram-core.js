@@ -225,7 +225,7 @@
     function toItems(rawList, allowed) {
       if (!allowed) return [];
       return ApoComm.splitList(rawList).map(function (raw) {
-        return ApoComm.toFirstPerson(raw, regFields.FirstName, regFields.LastName);
+        return ApoComm.toFirstPerson(raw, regFields.FirstName, regFields.LastName, regFields.PrimaryLanguage);
       });
     }
     var byCat = {};
@@ -233,9 +233,9 @@
     byCat.prayer = toItems(intakeFields.PrayerNeeds, security.allow.prayer);
     byCat.looking_ahead = toItems(intakeFields.UpcomingProjects, security.allow.looking_ahead);
     byCat.numbers = (security.allow.numbers && intakeFields.NumbersUpdate.trim())
-      ? [ApoComm.toFirstPerson(intakeFields.NumbersUpdate.trim(), regFields.FirstName, regFields.LastName)] : [];
+      ? [ApoComm.toFirstPerson(intakeFields.NumbersUpdate.trim(), regFields.FirstName, regFields.LastName, regFields.PrimaryLanguage)] : [];
     byCat.meetings = (security.allow.highlights && intakeFields.MeetingsSummary.trim())
-      ? [ApoComm.toFirstPerson(intakeFields.MeetingsSummary.trim(), regFields.FirstName, regFields.LastName)] : [];
+      ? [ApoComm.toFirstPerson(intakeFields.MeetingsSummary.trim(), regFields.FirstName, regFields.LastName, regFields.PrimaryLanguage)] : [];
     return byCat;
   }
 

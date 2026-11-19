@@ -99,9 +99,47 @@
   // `topics` is a { key: [keyword, ...] } map, specific to whichever
   // generator is calling this (newsletter and Instagram gate different
   // topic sets) — the blocking decision itself is identical everywhere.
+  // The only values that mean "this profile is cleared". Anything else —
+  // a blank cell, "OUI" typed into the French-headed Sheet, a typo, a row
+  // that came back short from the backend — is treated as sensitive and
+  // blocks. The apostello-onboarding rule is explicit: in doubt, YES. A
+  // false block costs one question; a false pass costs far more.
+  var NOT_SENSITIVE = ["NO", "N", "NON", "FALSE", "0"];
+  var SENSITIVE = ["YES", "Y", "OUI", "SI", "SÍ", "SIM", "TRUE", "1"];
+
+  // Returns true (sensitive) for every value that is not an explicit,
+  // recognized "no" — including an empty or unrecognized one.
+  ApoComm.isSecuritySensitive = function (raw) {
+    var v = String(raw == null ? "" : raw).trim().toUpperCase();
+    if (NOT_SENSITIVE.indexOf(v) !== -1) return false;
+    return true;
+  };
+
+  // True only when the value is one this codebase actually understands,
+  // either way. An unrecognized value still blocks (above) but deserves a
+  // different message: the operator mistyped, they didn't flag a risk.
+  ApoComm.isSecurityValueRecognized = function (raw) {
+    var v = String(raw == null ? "" : raw).trim().toUpperCase();
+    return NOT_SENSITIVE.indexOf(v) !== -1 || SENSITIVE.indexOf(v) !== -1;
+  };
+
   ApoComm.evaluateSecurityGate = function (regFields, topics) {
-    var sensitive = regFields.SecuritySensitive.trim().toUpperCase() === "YES";
+    var rawFlag = regFields.SecuritySensitive;
+    var sensitive = ApoComm.isSecuritySensitive(rawFlag);
+    var recognized = ApoComm.isSecurityValueRecognized(rawFlag);
     var instructions = regFields.SecurityInstructions.trim();
+
+    // An unreadable flag is never silently treated as a cleared profile.
+    if (sensitive && !recognized) {
+      return {
+        blocked: true,
+        sensitive: true,
+        unreadableFlag: true,
+        reason: String(rawFlag || "").trim()
+          ? "Cannot generate — the security field reads \"" + String(rawFlag).trim() + "\", which this tool does not recognize. Set it to YES or NO on the client record."
+          : "Cannot generate — the security field is empty on this client record. Set it to YES or NO before anything is published."
+      };
+    }
 
     if (!sensitive) {
       var allowAll = {};
@@ -130,21 +168,76 @@
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   };
 
+  // Missionaries write this field as an instruction ("Ne pas nommer
+  // l'hôpital du district", "Please don't mention the school"), not as a
+  // bare term. Matching the instruction verbatim finds nothing, so the
+  // subject it refers to gets published while the audit panel reports
+  // "not found in output". These prefixes are stripped so the subject
+  // itself is what gets searched for.
+  var AVOID_PREFIXES = [
+    // French
+    /^(?:merci de |priè?re de |s'?il (?:vous |te )?pla[îi]t,? )?(?:ne (?:pas|jamais) |[ée]viter de |[ée]viter )(?:nommer|mentionner|citer|parler de|[ée]voquer|publier|dire|donner|indiquer|pr[ée]ciser|r[ée]v[ée]ler|partager)\s+/i,
+    /^(?:ne |n')(?:pas |jamais )?(?:nommez|mentionnez|citez|publiez)\s+/i,
+    /^(?:pas de|aucun[e]? mention de|rien sur|sans)\s+/i,
+    // English
+    /^(?:please |kindly )?(?:do not|don'?t|never|avoid|refrain from)\s+(?:name|naming|mention|mentioning|say|saying|cite|citing|publish|publishing|share|sharing|refer to|referring to|talk about|talking about|include|including|use|using)\s+/i,
+    /^(?:no mention of|nothing about|leave out|omit|without)\s+/i,
+    // Spanish / Portuguese
+    /^(?:no|não|nao)\s+(?:nombrar|mencionar|publicar|citar|compartir|mencione|nomear|publicar|citar|compartilhar)\s+/i
+  ];
+  // Articles left dangling once the subject is cut out of a sentence.
+  var LEADING_ARTICLE = /^(?:l'|le |la |les |du |de la |des |de l'|d'|un |une |the |a |an |el |los |las |o |os |as )/i;
+
+  // From "Ne pas nommer l'hôpital du district." produce the terms worth
+  // searching for: the whole clause (in case it really is a bare term),
+  // the subject after the instruction prefix, and that subject without a
+  // leading article, so "l'hôpital du district" and "hôpital du district"
+  // both match.
+  ApoComm.avoidTermVariants = function (clause) {
+    var variants = [];
+    function push(v) {
+      v = String(v || "").replace(/[.;:,!?]+\s*$/, "").trim();
+      if (v.length >= 3 && variants.indexOf(v) === -1) variants.push(v);
+    }
+    push(clause);
+    var stripped = clause;
+    AVOID_PREFIXES.forEach(function (re) {
+      var next = stripped.replace(re, "");
+      if (next !== stripped) { stripped = next.trim(); push(stripped); }
+    });
+    if (LEADING_ARTICLE.test(stripped)) push(stripped.replace(LEADING_ARTICLE, ""));
+    // Longest first: strip the full phrase before its article-less form,
+    // so the article doesn't survive as an orphan.
+    return variants.sort(function (a, b) { return b.length - a.length; });
+  };
+
   ApoComm.applyAvoidList = function (text, avoidRaw) {
     var terms = avoidRaw.split(/[;\n]+/).map(function (t) { return t.trim(); }).filter(Boolean);
     var applied = [];
     var result = text;
     terms.forEach(function (term) {
-      var re = new RegExp(ApoComm.escapeRegex(term), "gi");
-      var found = re.test(result);
+      var variants = ApoComm.avoidTermVariants(term);
+      var found = false;
+      var matched = [];
+      variants.forEach(function (variant) {
+        var re = new RegExp(ApoComm.escapeRegex(variant), "gi");
+        if (!re.test(result)) return;
+        found = true;
+        matched.push(variant);
+        result = result.replace(re, "");
+      });
       if (found) {
-        result = result.replace(re, "")
+        result = result
+          // Articles stranded by the removal. A French elided article is
+          // never followed by whitespace ("orientée par l' ce mois-ci"),
+          // so that form is always breakage, not legitimate text.
+          .replace(/\b(?:l|d|n|j|m|t|s|c|qu)['’]\s+/gi, "")
           .replace(/[ \t]{2,}/g, " ")
           .replace(/ +([.,!?;:])/g, "$1")
           .replace(/ +\n/g, "\n")
           .replace(/\n{3,}/g, "\n\n");
       }
-      applied.push({ term: term, found: found });
+      applied.push({ term: term, found: found, matched: matched });
     });
     return { text: result.trim(), applied: applied };
   };
@@ -166,8 +259,16 @@
   // our" — the common patterns in this data — but an unrecognized
   // construction (e.g. "<Name>" as a verb's object with no preposition)
   // can slip through unconverted.
-  ApoComm.toFirstPerson = function (text, firstName, lastName) {
+  // Every rule below is English: English auxiliaries, English pronouns,
+  // English possessives. Run on French it produces "I accompagne des
+  // familles. Elle forme aussi des mères." — the name swapped, the verb
+  // unconjugated, the later pronouns untouched. Callers pass the profile
+  // language; anything but English is returned unchanged, because the
+  // missionary's own sentence is already better than a mangled one.
+  // Removing this guard requires per-language rules, not a wider regex.
+  ApoComm.toFirstPerson = function (text, firstName, lastName, language) {
     if (!text) return text;
+    if (language && ApoComm.detectLanguage(language) !== "english") return text;
     var result = text;
     var names = [];
     if (firstName && lastName) names.push(ApoComm.escapeRegex((firstName + " " + lastName).trim()));
@@ -228,11 +329,24 @@
     return result;
   };
 
+  // PrimaryLanguage is a free-text field on a form written in English, so
+  // the value that actually arrives is usually the English name of the
+  // language ("French"), sometimes the endonym ("Français"), sometimes an
+  // ISO code ("fr", "fr-FR"). The old test only matched the endonym stem
+  // "fran", so "French" fell through to English and a francophone
+  // missionary got an English newsletter wrapped around French sentences.
   ApoComm.detectLanguage = function (primaryLanguage) {
     var v = (primaryLanguage || "").trim().toLowerCase();
-    if (/fran|français|francais/.test(v)) return "french";
-    if (/span|español|espanol/.test(v)) return "spanish";
-    if (/portug|português/.test(v)) return "portuguese";
+    if (!v) return "english";
+    var code = v.split(/[-_]/)[0];
+    if (code === "fr") return "french";
+    if (code === "es" || code === "ca") return "spanish";
+    if (code === "pt") return "portuguese";
+    if (code === "en") return "english";
+    if (/fren|fran[cç]|french/.test(v)) return "french";
+    if (/span|espan|españ|castell/.test(v)) return "spanish";
+    if (/portug|portugu/.test(v)) return "portuguese";
+    if (/engl|angl|ingl/.test(v)) return "english";
     return "english";
   };
 

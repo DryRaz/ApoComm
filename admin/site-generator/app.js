@@ -279,8 +279,19 @@
   }
 
   function evaluateSecurityGate(fields) {
-    var sensitive = fields.SecuritySensitive.trim().toUpperCase() === "YES";
+    // Same fail-closed rule as the shared gate in apocomm-common.js: only
+    // an explicit, recognized "no" clears a profile. Blank, "OUI", or any
+    // unrecognized value blocks.
+    var sensitive = ApoComm.isSecuritySensitive(fields.SecuritySensitive);
+    var recognized = ApoComm.isSecurityValueRecognized(fields.SecuritySensitive);
     var instructions = fields.SecurityInstructions.trim();
+
+    if (sensitive && !recognized) {
+      return {
+        blocked: true,
+        reason: "We can't generate this site yet. The security field on this profile is empty or doesn't read as a clear yes or no, so we're holding off rather than guessing. Set it to YES or NO on the client record and try again."
+      };
+    }
 
     if (!sensitive) {
       return { blocked: false, sensitive: false, allowCountry: true, allowCity: true };
@@ -329,8 +340,14 @@
   // patterns in this data — but a construction it doesn't recognize (e.g.
   // "<Name>" as the object of a verb with no preposition) can slip through
   // unconverted.
-  function toFirstPerson(text, firstName, lastName) {
+  // Same English-only limitation as the shared copy in apocomm-common.js:
+  // every rule here is an English auxiliary, pronoun or possessive. On a
+  // non-English profile it mangles the sentence ("I veut faire passer son
+  // soutien"), so callers pass the profile language and anything but
+  // English is returned untouched.
+  function toFirstPerson(text, firstName, lastName, language) {
     if (!text) return text;
+    if (language && ApoComm.detectLanguage(language) !== "english") return text;
     var result = text;
     var names = [];
     if (firstName && lastName) names.push(escapeRegex((firstName + " " + lastName).trim()));
@@ -471,8 +488,8 @@
     var fullName = (fields.FirstName + " " + fields.LastName).trim();
     var firstName = fields.FirstName.trim();
     var title = escapeHtml(fullName) + " — Apostello Comm";
-    var summaryFirstPerson = toFirstPerson(fields.MissionSummary, fields.FirstName, fields.LastName);
-    var objectiveFirstPerson = toFirstPerson(fields.MainObjective, fields.FirstName, fields.LastName);
+    var summaryFirstPerson = toFirstPerson(fields.MissionSummary, fields.FirstName, fields.LastName, fields.PrimaryLanguage);
+    var objectiveFirstPerson = toFirstPerson(fields.MainObjective, fields.FirstName, fields.LastName, fields.PrimaryLanguage);
     var hook = escapeHtml(hookLine(summaryFirstPerson));
     var mailHref = "mailto:" + encodeURIComponent(fields.Email).replace(/%40/g, "@");
 
