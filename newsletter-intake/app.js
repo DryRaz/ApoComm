@@ -71,9 +71,11 @@
       clientResults.innerHTML = "";
 
       if (result.clients.length === 0) {
-        var msg = query.trim()
-          ? "No match — type your Client ID directly below instead."
-          : "No saved clients yet — type your Client ID directly below instead.";
+        var msg = result.tooShort
+          ? "Type at least " + ApoComm.SEARCH_MIN_CHARS + " letters of the name — or type your Client ID directly below instead."
+          : query.trim()
+            ? "No match — type your Client ID directly below instead."
+            : "No saved clients yet — type your Client ID directly below instead.";
         clientResults.innerHTML = '<li class="client-results-empty">' + msg + "</li>";
         clientResults.hidden = false;
         return;

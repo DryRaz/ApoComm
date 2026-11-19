@@ -550,7 +550,24 @@
   // comes back with zero matches (this browser may hold a locally-cached
   // client — e.g. registered while offline — that the backend search
   // genuinely has no record of yet).
+  // The backend refuses a search shorter than this and returns nothing:
+  // a blank query used to match every row, so three characters of URL
+  // returned the whole client base. Keep this in step with
+  // SEARCH_MIN_CHARS in backend/apocomm_backend.gs.
+  ApoComm.SEARCH_MIN_CHARS = 2;
+
+  ApoComm.searchTooShort = function (query) {
+    return String(query || "").trim().length < ApoComm.SEARCH_MIN_CHARS;
+  };
+
+  // Focusing the empty box used to list everyone the backend had. It
+  // cannot any more, so the caller gets `tooShort` and shows a hint —
+  // without this the tools fall through to "No saved clients yet", which
+  // tells an operator with a full database that it is empty.
   ApoComm.searchClients = function (query) {
+    if (ApoComm.searchTooShort(query)) {
+      return Promise.resolve({ clients: [], source: "none", warning: null, tooShort: true });
+    }
     return ApoComm.Backend.searchByName(query).then(function (result) {
       if (result.ok && result.clients.length > 0) {
         var summaries = result.clients.map(function (fields) {

@@ -172,9 +172,11 @@
       clientResults.innerHTML = "";
 
       if (result.clients.length === 0) {
-        var msg = query.trim()
-          ? "No match — paste the registration TSV row below instead."
-          : "No saved clients yet — paste the registration TSV row below instead.";
+        var msg = result.tooShort
+          ? "Type at least " + ApoComm.SEARCH_MIN_CHARS + " letters of the name — or paste the registration TSV row below instead."
+          : query.trim()
+            ? "No match — paste the registration TSV row below instead."
+            : "No saved clients yet — paste the registration TSV row below instead.";
         clientResults.innerHTML = '<li class="client-results-empty">' + msg + "</li>";
         clientResults.hidden = false;
         return;
