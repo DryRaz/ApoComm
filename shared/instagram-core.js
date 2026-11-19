@@ -317,8 +317,14 @@
     var pairsUsed = {}; // category -> [formats]
 
     var posts = scheduled.map(function (entry, idx) {
-      var caption = getCaption(lang, entry.item.category, entry.format, entry.item.seed);
-      checkLanguagePurity(caption, entry.item.seed, lang);
+      // The seed is closed BEFORE templating, and the same closed string is
+      // what checkLanguagePurity() splits on — it isolates the
+      // template-authored framing by removing the seed, so the two must be
+      // the identical string or the split finds nothing and the whole
+      // caption gets language-checked as if it were framing.
+      var seed = ApoComm.endSentence(entry.item.seed);
+      var caption = getCaption(lang, entry.item.category, entry.format, seed);
+      checkLanguagePurity(caption, seed, lang);
       var avoided = ApoComm.applyAvoidList(caption, intakeFields.AnythingToAvoid);
       pairsUsed[entry.item.category] = pairsUsed[entry.item.category] || [];
       pairsUsed[entry.item.category].push(entry.format);

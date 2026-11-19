@@ -215,10 +215,14 @@
   // purely the missionary's own sentences plus fixed connective tissue.
   function weaveItems(items, connectors) {
     if (items.length === 0) return "";
-    var parts = [items[0]];
+    // Every item but the last is followed by a connector that opens a new
+    // sentence, so each needs its own terminal mark — see
+    // ApoComm.endSentence(). The last one is closed too, since free text or
+    // an expansion line may follow it.
+    var parts = [ApoComm.endSentence(items[0])];
     for (var i = 1; i < items.length; i++) {
       var connector = connectors[(i - 1) % connectors.length];
-      parts.push(connector + items[i]);
+      parts.push(connector + ApoComm.endSentence(items[i]));
     }
     return parts.join(" ");
   }
@@ -233,7 +237,8 @@
   // caller can skip the section entirely rather than padding it.
   function buildSection(items, freeText, connectors, bank, minWords) {
     var woven = weaveItems(items, connectors);
-    var text = freeText ? (woven ? woven + " " + freeText : freeText) : woven;
+    var tail = freeText ? ApoComm.endSentence(freeText) : "";
+    var text = tail ? (woven ? woven + " " + tail : tail) : woven;
     if (!text) return null;
     for (var i = 0; i < bank.length && wordCount(text) < minWords; i++) {
       text += " " + bank[i];

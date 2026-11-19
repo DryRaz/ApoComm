@@ -60,23 +60,12 @@ function sendMonthlyIntakeReminders() {
   Logger.log('Reminders sent: ' + sent);
 }
 
-/* The missionary chose English or French when they registered, and every
- * other thing this system sends them — newsletter, captions, their public
- * page — follows that choice. This email is the one piece that did not,
- * and it is the first thing they read each month. Same two-language rule
- * as the frontend: anything that is not French gets English. */
-function reminderLanguage(primaryLanguage) {
-  const v = String(primaryLanguage || '').trim().toLowerCase();
-  if (v.split(/[-_]/)[0] === 'fr') return 'french';
-  if (/fren|fran[cç]/.test(v)) return 'french';
-  return 'english';
-}
 
 function sendReminderEmail(email, firstName, lastName, primaryLanguage) {
   const name = firstName + ' ' + lastName;
   let subject, body;
 
-  if (reminderLanguage(primaryLanguage) === 'french') {
+  if (emailLanguage(primaryLanguage) === 'french') {
     subject = 'Vos nouvelles du mois — Apostello Comm';
     body =
       'Bonjour ' + firstName + ',\n\n' +

@@ -270,6 +270,23 @@
     });
   };
 
+  // The missionary's own view, reached with a token instead of a ClientID.
+  // Unlike every other action here the payload is a single object, not a
+  // row or a list, so it is passed through rather than normalised — the
+  // space page consumes its named fields directly. A bad token comes back
+  // as a reachable-but-refused {error}, which is `ok: true` with no space:
+  // "this link is wrong" and "the database is down" are different things
+  // to tell someone, and only the second is worth retrying.
+  Backend.getClientSpace = function (token) {
+    return call({ action: "getClientSpace", token: token }).then(function (json) {
+      if (looksEmpty(json)) return { ok: true, space: null, reason: null };
+      if (json && json.error) return { ok: true, space: null, reason: json.error };
+      return { ok: true, space: json, reason: null };
+    }).catch(function (err) {
+      return { ok: false, error: err.message, space: null, reason: null };
+    });
+  };
+
   Backend.listIntakeMonths = function (clientId) {
     return call({ action: "listIntakeMonths", clientId: clientId }).then(function (json) {
       if (looksEmpty(json)) return { ok: true, months: [] };

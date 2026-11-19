@@ -282,6 +282,21 @@
   // language; anything but English is returned unchanged, because the
   // missionary's own sentence is already better than a mangled one.
   // Removing this guard requires per-language rules, not a wider regex.
+  /* Missionaries write intake list items the way anyone writes a list —
+     "Douze mères ont terminé la formation", no full stop. Both generators
+     then glue those items to other sentences, which produced run-ons like
+     "...ont terminé la formation Maintenant, mettez-vous..." in captions
+     and newsletter paragraphs alike. This closes the item instead of
+     rewriting it: nothing is added but the terminal mark the writer left
+     off. A closing quote or bracket after the mark counts as terminated,
+     and so does a dash or ellipsis the writer chose deliberately. */
+  ApoComm.endSentence = function (text) {
+    var t = String(text == null ? "" : text).trim();
+    if (!t) return "";
+    if (/[.!?…:;—–]["»”’'\)\]]?$/.test(t)) return t;
+    return t + ".";
+  };
+
   ApoComm.toFirstPerson = function (text, firstName, lastName, language) {
     if (!text) return text;
     if (language && ApoComm.detectLanguage(language) !== "english") return text;
@@ -697,6 +712,28 @@
   // cache to fall back to (nothing was ever written locally for them), so
   // a transport failure just means an empty list plus the usual warning,
   // same as every other backend-first read once fallback data runs out.
+  // No local-cache fallback, deliberately: the space page is opened on the
+  // missionary's own device, often one that has never loaded any of these
+  // tools, and caching someone's record against a token would leave it on
+  // whatever machine opened the link.
+  /* Deliberately no local-cache fallback, and deliberately NOT the
+     BACKEND_DOWN_WARNING used elsewhere: nothing about a client space is
+     ever cached locally, so "using local data only" would promise a
+     fallback that does not exist. `offline` lets the caller tell "the
+     database is down, come back in a minute" apart from "this link is not
+     valid" — a missionary told their link is dead will ask for a new one,
+     which is the wrong move when the server is merely unreachable. */
+  ApoComm.fetchClientSpace = function (token) {
+    return ApoComm.Backend.getClientSpace(token).then(function (result) {
+      return {
+        space: result.space,
+        reason: result.reason,
+        offline: !result.ok,
+        warning: null
+      };
+    });
+  };
+
   ApoComm.fetchPhotos = function (clientId) {
     return ApoComm.Backend.listPhotos(clientId).then(function (result) {
       return {

@@ -39,7 +39,18 @@
 const SHEET_FICHES = 'Fiches';
 const SHEET_INTAKES = 'Monthly_Intakes';
 const SHEET_JOURNAL = 'Journal_Agent';
+// One row per client: ClientID, Token, Created. A separate tab rather than
+// a 37th column in Fiches — that row is positional TSV everywhere in the
+// codebase, and the last two columns are formulas, so widening it would
+// break parseRow() and shift %_Completeness/Missing_Fields.
+const SHEET_TOKENS = 'Access_Tokens';
 const FICHES_DATA_START_ROW = 2; // 0-indexed: row 3 in the sheet (rows 1-2 are headers)
+
+// Where the missionary reads their own content. Token travels in the URL
+// fragment, never the query string: a fragment is not sent in the Referer
+// header and does not land in server logs.
+const SPACE_URL = 'https://dryraz.github.io/ApoComm/espace/';
+const SITE_BASE_URL = 'https://dryraz.github.io/ApoComm/sites/';
 
 // Fiches columns, 0-indexed, named rather than scattered as magic numbers.
 const COL = {
@@ -104,6 +115,8 @@ function doGet(e) {
         return jsonOutput(listIntakeMonths(params.clientId));
       case 'listPhotos':
         return jsonOutput(listPhotos(params.clientId));
+      case 'getClientSpace':
+        return jsonOutput(getClientSpace(params.token));
       default:
         return jsonOutput({ error: 'Unknown action: ' + params.action });
     }
@@ -318,6 +331,155 @@ function createMissionaryPhotoFolder(clientId, firstName, lastName, email, sensi
   return folder.getUrl();
 }
 
+/* ---- client space: token, lookup, welcome mail --------------------------
+ * The missionary never touches the admin tools. They get one link, holding
+ * a random token, and that link shows them their own site, newsletter and
+ * Instagram posts. The token is the credential, so it must not be
+ * derivable from anything public: ClientIDs run APC-2026-001, -002, -003,
+ * and a space keyed on those would be enumerable by editing three digits.
+ */
+
+function getOrCreateTokensSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_TOKENS);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_TOKENS);
+    sheet.getRange(1, 1, 1, 3).setValues([['ClientID', 'Token', 'Created']]);
+  }
+  return sheet;
+}
+
+function createAccessToken(clientId) {
+  // 32 hex characters from Apps Script's cryptographic UUID source, which
+  // is what this platform offers; Math.random() would not do here.
+  const token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').slice(0, 32);
+  getOrCreateTokensSheet().appendRow([clientId, token, new Date()]);
+  return token;
+}
+
+function resolveToken(token) {
+  const t = String(token || '').trim();
+  if (t.length < 16) return null; // too short to be one of ours; don't scan
+  const data = getOrCreateTokensSheet().getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]) === t) return String(data[i][0]);
+  }
+  return null;
+}
+
+/* What a token buys: the client's own identity, their site link, and the
+ * months they have submitted — enough for the space page to regenerate
+ * their newsletter and Instagram calendar with the shared modules the
+ * admin tools already use.
+ *
+ * Security_Instructions is never returned. It is Apostello's operational
+ * note about that missionary's situation, not content for them to read,
+ * and it has no business in a browser. The consequence is deliberate: a
+ * profile flagged sensitive gets `canGenerate: false` and the page shows
+ * their site link plus a line pointing at their Apostello contact, instead
+ * of generated content. Lifting that would mean porting the clause scanner
+ * (isTopicAllowed) into Apps Script — the same safety-critical logic
+ * maintained in two languages, which is how the two halves drift apart.
+ */
+function getClientSpace(token) {
+  const clientId = resolveToken(token);
+  if (!clientId) {
+    journal('', 'DENIED', 'client space: unknown token');
+    return { error: 'This link is not valid. Ask your Apostello contact for a new one.' };
+  }
+
+  const found = getClientRow(clientId);
+  if (found.error) return { error: 'This link is not valid. Ask your Apostello contact for a new one.' };
+
+  const row = found.row;
+  const sensitive = isSecuritySensitive(row[COL.securitySensitive]);
+
+  const intakes = getIntakesSheet().getDataRange().getValues();
+  const months = [];
+  for (let i = 1; i < intakes.length; i++) {
+    if (intakes[i][0] === clientId) months.push({ month: intakes[i][1], row: intakes[i] });
+  }
+  months.sort(function (a, b) { return String(b.month).localeCompare(String(a.month)); });
+
+  return {
+    clientId: clientId,
+    firstName: row[COL.firstName],
+    lastName: row[COL.lastName],
+    primaryLanguage: row[COL.primaryLanguage],
+    siteUrl: SITE_BASE_URL + clientId + '/',
+    canGenerate: !sensitive,
+    sensitive: sensitive,
+    // The registration row with the security note blanked, so the shared
+    // generators can run in the page without ever receiving it.
+    regRow: row.map(function (v, i) { return i === COL.securityInstructions ? '' : v; }),
+    months: months
+  };
+}
+
+/* No welcome message existed at all: a missionary registered, saw a raw TSV
+ * row — an internal artefact that means nothing to them — and heard nothing
+ * from the agency until the 1st of the next month. This is also how the
+ * token reaches them the first time.
+ *
+ * The mail carries no country, no city and no mission summary, for every
+ * client and not only the flagged ones. A missionary may read it on a
+ * device or a network they do not control, and nothing in it needs to
+ * describe their work in order to do its job.
+ */
+/* The missionary chose English or French when they registered, and every
+ * other thing this system sends them — newsletter, captions, their public
+ * page — follows that choice. Both outbound emails use this, so it lives
+ * in the backend file: apocomm_reminder.gs relies on it, and a project
+ * holding only that file would otherwise break on the first send. Same
+ * two-language rule as the frontend: anything not French gets English. */
+function emailLanguage(primaryLanguage) {
+  const v = String(primaryLanguage || '').trim().toLowerCase();
+  if (v.split(/[-_]/)[0] === 'fr') return 'french';
+  if (/fren|fran[c\u00e7]/.test(v)) return 'french';
+  return 'english';
+}
+
+function sendWelcomeEmail(email, firstName, clientId, token, primaryLanguage) {
+  if (!email) return;
+  const link = SPACE_URL + '#t=' + token;
+  let subject, body;
+
+  if (emailLanguage(primaryLanguage) === 'french') {
+    subject = 'Bienvenue chez Apostello Comm';
+    body =
+      'Bonjour ' + firstName + ',\n\n' +
+      'Votre inscription est enregistrée. Voici votre espace personnel :\n' +
+      link + '\n\n' +
+      'Vous y retrouverez votre page publique, votre lettre de nouvelles et ' +
+      'vos publications du mois, dès qu’ils seront prêts.\n\n' +
+      'Gardez ce lien : il est personnel et nous ne vous demanderons jamais ' +
+      'de mot de passe.\n\n' +
+      'Chaque début de mois, nous vous enverrons un court formulaire pour ' +
+      'recueillir vos nouvelles.\n\n' +
+      'Votre référence client : ' + clientId + '\n\nApostello Comm';
+  } else {
+    subject = 'Welcome to Apostello Comm';
+    body =
+      'Hi ' + firstName + ',\n\n' +
+      'Your registration is saved. Here is your personal space:\n' +
+      link + '\n\n' +
+      'It holds your public page, your newsletter and your posts for the ' +
+      'month, as soon as they are ready.\n\n' +
+      'Keep this link — it is personal to you, and we will never ask you ' +
+      'for a password.\n\n' +
+      'At the start of each month we will send you a short form to collect ' +
+      'your news.\n\n' +
+      'Your client reference: ' + clientId + '\n\nApostello Comm';
+  }
+
+  try {
+    MailApp.sendEmail(email, subject, body);
+  } catch (e) {
+    // A bad address must not lose the registration that already landed.
+    journal(clientId, 'ERROR', 'welcome email not sent: ' + String(e));
+  }
+}
+
 /* ---- writes ------------------------------------------------------------- */
 
 function registerClient(rowValues) {
@@ -342,9 +504,16 @@ function registerClient(rowValues) {
     const targetRow = findFirstEmptyRow(sheet);
     sheet.getRange(targetRow, 1, 1, rowValues.length).setValues([rowValues]);
 
-    journal(newId, 'registerClient',
-      'row written; photo folder ' + (sensitive ? 'PRIVATE (sensitive or unreadable flag)' : 'link-viewable'));
+    const token = createAccessToken(newId);
+    sendWelcomeEmail(email, firstName, newId, token, rowValues[COL.primaryLanguage]);
 
+    journal(newId, 'registerClient',
+      'row written; photo folder ' + (sensitive ? 'PRIVATE (sensitive or unreadable flag)' : 'link-viewable') +
+      '; access token issued; welcome email sent');
+
+    // The token is deliberately NOT returned to the browser. It reaches the
+    // missionary by email, at the address on their own record — so a
+    // registration typed by someone else cannot walk away with the link.
     return { success: true, clientId: newId, photoFolderUrl: folderUrl };
   } finally {
     lock.releaseLock();

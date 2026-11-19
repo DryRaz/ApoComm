@@ -1,0 +1,162 @@
+/* The missionary's own space. Same "correspondence" identity as the
+   registration and intake forms — paper, ink, ochre — because those are
+   the three pages a missionary ever sees, and they should feel like one
+   thing. The four palette values are duplicated verbatim here, as in the
+   other tools: no shared stylesheet, consistent with this repo's
+   no-build-step approach. */
+:root {
+  --paper: #F7F3EA;
+  --ink: #2B3A55;
+  --accent: #C08A3E;
+  --accent-dark: #8A5F23;
+  --sage: #7A8B76;
+  --rust: #B5533C;
+  --line: #D8CFBD;
+  --card: #FFFFFF;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.wrap {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+}
+
+h1, h2, h3 { font-family: "Fraunces", Georgia, serif; font-weight: 600; line-height: 1.25; }
+h1 { font-size: 1.9rem; margin: 0.2rem 0 0.6rem; }
+h2 { font-size: 1.2rem; margin: 0 0 0.5rem; }
+h3 { font-size: 1.02rem; margin: 0 0 0.3rem; }
+
+.masthead { margin-bottom: 1.75rem; }
+.eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+.lede { margin: 0; color: #5d6478; }
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1.1rem;
+}
+.panel-quiet { background: #FBF8F1; }
+
+.block { margin-top: 1.5rem; }
+.block:first-of-type { margin-top: 1rem; }
+.block-note { margin: 0 0 0.75rem; font-size: 0.88rem; color: #5d6478; }
+
+.month-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.month-pick { font-size: 0.85rem; color: #5d6478; display: flex; align-items: center; gap: 0.4rem; }
+.month-pick select {
+  font: inherit;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.subject-line { margin: 0 0 0.6rem; }
+
+.output {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+  margin: 0 0 0.75rem;
+  max-height: 26rem;
+  overflow-y: auto;
+}
+
+.posts { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 0.75rem; }
+.post {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--sage);
+  border-radius: 0 6px 6px 0;
+  padding: 0.8rem 0.95rem;
+}
+.post-meta {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sage);
+  font-weight: 600;
+}
+.post-caption { margin: 0; font-size: 0.93rem; }
+.post-tags { margin: 0.45rem 0 0; font-size: 0.83rem; color: var(--accent-dark); word-break: break-word; }
+
+.pill {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  cursor: pointer;
+}
+.pill-ghost { background: transparent; color: var(--accent-dark); }
+.pill:hover { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; }
+.pill:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.copy-status { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--sage); min-height: 1.2em; }
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.1rem 0;
+}
+
+.backend-warning {
+  background: #FBF1DF;
+  border-left: 3px solid var(--accent);
+  padding: 0.6rem 0.85rem;
+  border-radius: 0 5px 5px 0;
+  font-size: 0.88rem;
+  margin: 0 0 1.1rem;
+}
+
+.foot {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: #6f7689;
+}
+.foot p { margin: 0; }
+
+@media (max-width: 480px) {
+  .wrap { padding: 1.75rem 1rem 3rem; }
+  h1 { font-size: 1.6rem; }
+  .month-head { flex-direction: column; align-items: stretch; }
+}
