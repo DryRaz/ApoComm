@@ -55,7 +55,7 @@ const SITE_BASE_URL = 'https://dryraz.github.io/ApoComm/sites/';
 // Fiches columns, 0-indexed, named rather than scattered as magic numbers.
 const COL = {
   clientId: 0, onboardingStatus: 1, lastName: 3, firstName: 4, email: 5,
-  primaryLanguage: 7, country: 10, securitySensitive: 16,
+  primaryLanguage: 7, timezone: 8, country: 10, securitySensitive: 16,
   securityInstructions: 17, photosLink: 27
 };
 

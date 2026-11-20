@@ -10,7 +10,7 @@ text area.
 | File | Purpose |
 |---|---|
 | `apocomm_backend.gs` | The `doGet` Web App: the eight actions the six tools call. |
-| `apocomm_reminder.gs` | Monthly trigger that emails each client their intake link and their client-space link. |
+| `apocomm_reminder.gs` | Hourly trigger that emails each client their intake link and their client-space link, once a month at 8am in **their own** timezone. |
 
 ## Deploying a change
 
@@ -46,6 +46,33 @@ Two things must agree across the boundary, or the system fails quietly:
   `shared/apocomm-common.js`. If the frontend's is the lower of the two, the
   backend silently returns nothing for queries the frontend was willing to
   send.
+
+## Reminders
+
+`sendMonthlyIntakeReminders()` runs **hourly**, not monthly, and each run
+mails only the clients for whom it is now past 8am locally — read from the
+`Timezone` column their registration filled in (`UTC±X`, half-hour and
+quarter-hour offsets included). It never calls `Session.getScriptTimeZone()`
+or `Utilities.formatDate()`: local time comes from the absolute instant plus
+the client's own offset, so **changing the project's timezone setting cannot
+move anyone's reminder**. Daylight saving is not modelled, matching the
+registration form, so a client on DST is an hour off for part of the year.
+
+`Reminders_Sent` (ClientID, Month, SentAt) is what stops an hourly trigger
+mailing the same person 24 times; it is created on demand and doubles as an
+audit trail. A row is written only on a successful send, so a failure is
+retried next hour rather than written off for the month.
+
+Two constants set the shape: `REMINDER_LOCAL_HOUR` (8) and
+`REMINDER_WINDOW_DAYS` (7). The window is why a reminder cannot arrive on
+the 30th, and why a client west of UTC does not get two within hours when
+the month rolls over. If a client's Timezone is blank or unreadable,
+`DEFAULT_UTC_OFFSET_MINUTES` applies and the fallback is journalled by
+ClientID — a default nobody can see is a default nobody fixes.
+
+After pasting a new version, run `createMonthlyTrigger` once. It deletes any
+existing trigger for this handler first, so it is also the migration path
+off the old monthly one.
 
 ## Access tokens
 
