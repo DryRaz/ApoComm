@@ -46,6 +46,7 @@
       renderFailTitle: "We couldn’t prepare this month",
       renderFailBody: "Your news reached us — nothing you sent has been lost. Something went wrong on our side while putting it together. Please tell your Apostello contact, and they will sort it out.",
       sectionFailed: "This part couldn’t be prepared. Your contact can sort it out.",
+      generatedLegend: "The highlighted sentences were added automatically to fill out a short section — you did not write them. Read them over and cut or change anything that isn’t yours.",
       noAccessTitle: "This link isn’t working",
       noAccessGeneric: "Ask your Apostello contact to send you a fresh link.",
       offlineTitle: "We can’t reach your file right now",
@@ -81,6 +82,7 @@
       renderFailTitle: "Nous n’avons pas pu préparer ce mois",
       renderFailBody: "Vos nouvelles nous sont bien parvenues — rien de ce que vous avez envoyé n’est perdu. Quelque chose a bloqué de notre côté au moment de les mettre en forme. Signalez-le à votre interlocuteur Apostello, il s’en occupera.",
       sectionFailed: "Cette partie n’a pas pu être préparée. Votre interlocuteur peut s’en occuper.",
+      generatedLegend: "Les phrases surlignées ont été ajoutées automatiquement pour étoffer une section trop courte — ce n’est pas vous qui les avez écrites. Relisez-les et coupez ou modifiez ce qui ne vous ressemble pas.",
       noAccessTitle: "Ce lien ne fonctionne pas",
       noAccessGeneric: "Demandez à votre interlocuteur Apostello de vous envoyer un nouveau lien.",
       offlineTitle: "Nous n’arrivons pas à ouvrir votre dossier",
@@ -261,7 +263,7 @@
     try {
       var nl = ApoComm.Newsletter.build(regFields, intakeFields, nlSecurity);
       el("newsletter-subject").textContent = nl.subject;
-      el("newsletter-body").textContent = nl.body;
+      renderNewsletterBody(nl.body, nl.generated || []);
     } catch (e) {
       console.error("[ApoComm.Espace] newsletter:", e);
       el("newsletter-subject").textContent = "";
@@ -290,6 +292,35 @@
         '<p class="post-tags">' + ApoComm.escapeHtml(p.hashtags || "") + "</p>";
       host.appendChild(card);
     });
+  }
+
+  /* Writes the newsletter body with the reflection-bank sentences marked.
+   *
+   * Nothing is removed or reworded — the text is exactly what the
+   * generator produced. The marks only say which sentences the machine
+   * added to pad a short section, because without them the missionary is
+   * about to send a supporter a feeling, in the first person, that they
+   * never expressed. Marked or not, it is theirs to keep, cut or rewrite.
+   *
+   * The whole body is escaped FIRST and the needles escaped the same way
+   * before replacing, so a `<` anywhere in their own prose can never
+   * become markup. The legend only appears when something was marked. */
+  function renderNewsletterBody(body, generated) {
+    var host = el("newsletter-body");
+    var html = ApoComm.escapeHtml(body);
+    var marked = 0;
+    generated.forEach(function (sentence) {
+      var needle = ApoComm.escapeHtml(sentence);
+      var at = html.indexOf(needle);
+      if (at === -1) return;
+      html = html.slice(0, at) +
+             '<span class="generated">' + needle + "</span>" +
+             html.slice(at + needle.length);
+      marked++;
+    });
+    host.innerHTML = html;
+    show("generated-legend", marked > 0);
+    setText("generated-legend-text", T.generatedLegend);
   }
 
   function instagramPlainText() {

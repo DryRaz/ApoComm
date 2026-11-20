@@ -238,15 +238,27 @@
   // non-specific reflection bank used elsewhere tops it up toward
   // minWords. Returns null if there is no real material at all, so the
   // caller can skip the section entirely rather than padding it.
+  /* `added` lists the bank sentences this section appended, verbatim.
+   *
+   * The text itself is unchanged — this is metadata only. It exists because
+   * nothing downstream could tell the missionary's own words from the
+   * reflection bank's: both arrive in one paragraph, in the first person,
+   * under their name. A supporter reading "exactly why I keep going, even
+   * on the harder days" has no reason to doubt the missionary wrote it, and
+   * neither did the missionary before sending it. Callers that want to show
+   * the difference can now find it; callers that don't are unaffected.
+   */
   function buildSection(items, freeText, connectors, bank, minWords) {
     var woven = weaveItems(items, connectors);
     var tail = freeText ? ApoComm.endSentence(freeText) : "";
     var text = tail ? (woven ? woven + " " + tail : tail) : woven;
     if (!text) return null;
+    var added = [];
     for (var i = 0; i < bank.length && wordCount(text) < minWords; i++) {
       text += " " + bank[i];
+      added.push(bank[i]);
     }
-    return { text: text, reachedMin: wordCount(text) >= minWords };
+    return { text: text, reachedMin: wordCount(text) >= minWords, added: added };
   }
 
   function buildCtaLines(t, channelsRaw, allowWhatsApp, whatsAppPhone) {
@@ -292,6 +304,9 @@
     var banks = EXPANSION_BANKS[lang] || EXPANSION_BANKS.english;
     var connectors = CONNECTORS[lang] || CONNECTORS.english;
     var expansionNotes = [];
+    // Every bank sentence this newsletter appended, across all sections.
+    // Metadata only — the body is byte-for-byte what it was before.
+    var generated = [];
 
     function convertAll(rawList) {
       return ApoComm.splitList(rawList).map(function (item) {
@@ -306,6 +321,7 @@
     if (highlightsSection) {
       paragraphs.push(t.highlightsLabel + "\n" + withFallbackNote(highlightsSection));
       expansionNotes.push({ section: "Highlights", words: wordCount(highlightsSection.text), reachedMin: highlightsSection.reachedMin });
+      generated = generated.concat(highlightsSection.added || []);
     }
 
     var prayerItems = security.allow.prayer ? convertAll(intakeFields.PrayerNeeds) : [];
@@ -313,6 +329,7 @@
     if (prayerSection) {
       paragraphs.push(t.prayerLabel + "\n" + withFallbackNote(prayerSection));
       expansionNotes.push({ section: "PrayerNeeds", words: wordCount(prayerSection.text), reachedMin: prayerSection.reachedMin });
+      generated = generated.concat(prayerSection.added || []);
     }
 
     var projectItems = security.allow.looking_ahead ? convertAll(intakeFields.UpcomingProjects) : [];
@@ -320,6 +337,7 @@
     if (lookingAheadSection) {
       paragraphs.push(t.lookingAheadLabel + "\n" + withFallbackNote(lookingAheadSection));
       expansionNotes.push({ section: "UpcomingProjects", words: wordCount(lookingAheadSection.text), reachedMin: lookingAheadSection.reachedMin });
+      generated = generated.concat(lookingAheadSection.added || []);
     }
 
     var numbersText = (security.allow.numbers && intakeFields.NumbersUpdate.trim())
@@ -328,6 +346,7 @@
     if (numbersSection) {
       paragraphs.push(t.numbersLabel + "\n" + withFallbackNote(numbersSection));
       expansionNotes.push({ section: "NumbersUpdate", words: wordCount(numbersSection.text), reachedMin: numbersSection.reachedMin });
+      generated = generated.concat(numbersSection.added || []);
     }
 
     var ctaLines = buildCtaLines(t, regFields.Channels, security.allow.whatsapp, regFields.WhatsAppPhone.trim());
@@ -359,7 +378,15 @@
           return { term: a.term, found: true, inSubject: true };
         })
       ),
-      expansionNotes: expansionNotes
+      expansionNotes: expansionNotes,
+      /* The reflection-bank sentences present in `body`, verbatim, so a
+         caller can show the missionary which words are not theirs. Filtered
+         against the post-redaction body: applyAvoidList() may have cut
+         through one, and a needle that no longer appears would be marked
+         nowhere or, worse, matched somewhere it does not belong. */
+      generated: generated.filter(function (g) {
+        return g && avoidBody.text.indexOf(g) !== -1;
+      })
     };
   };
 })(window);

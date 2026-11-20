@@ -131,6 +131,26 @@ h3 { font-size: 1.02rem; margin: 0 0 0.3rem; }
 
 .copy-status { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--sage); min-height: 1.2em; }
 
+/* Marks the sentences the generator added. An underline rather than a
+   highlighter block: it has to be unmistakable while reading, without
+   turning a letter the missionary is proud of into a corrected exam
+   paper. The copy button reads textContent, so what they paste elsewhere
+   carries none of this. */
+.generated {
+  background: rgba(192, 138, 62, 0.11);
+  border-bottom: 2px solid var(--accent);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.generated-legend {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #5d6478;
+  border-left: 2px solid var(--accent);
+  padding-left: 0.7rem;
+}
+
 .rule {
   border: 0;
   border-top: 1px solid var(--line);

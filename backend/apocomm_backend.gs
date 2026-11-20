@@ -420,8 +420,19 @@ function getClientSpace(token) {
 
   const intakes = getIntakesSheet().getDataRange().getValues();
   const months = [];
+  const seenMonths = {};
   for (let i = 1; i < intakes.length; i++) {
-    if (intakes[i][0] === clientId) months.push({ month: intakes[i][1], row: intakes[i] });
+    if (intakes[i][0] !== clientId) continue;
+    // Normalised, and once per month: the client space renders whichever
+    // entry it is given, so a Date here becomes the label a missionary
+    // reads in their own month picker, and a repeat becomes two identical
+    // choices. The row itself carries the normalised month too.
+    const key = monthKey(intakes[i][1]);
+    if (seenMonths[key]) continue;
+    seenMonths[key] = true;
+    const intakeRow = intakes[i].slice();
+    intakeRow[1] = key;
+    months.push({ month: key, row: intakeRow });
   }
   months.sort(function (a, b) { return String(b.month).localeCompare(String(a.month)); });
 
@@ -575,12 +586,58 @@ function generateNextClientId(sheet) {
 function getIntake(clientId, month) {
   const sheet = getIntakesSheet();
   const data = sheet.getDataRange().getValues();
+  const wanted = monthKey(month);
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === clientId && data[i][1] === month) {
-      return { row: data[i] };
+    if (data[i][0] === clientId && monthKey(data[i][1]) === wanted) {
+      // The month is normalised on the way out too, so a caller never has
+      // to deal with the Date an older row still holds.
+      const row = data[i].slice();
+      row[1] = monthKey(row[1]);
+      return { row: row };
     }
   }
   return { error: 'Intake not found' };
+}
+
+/* A month cell, as a comparable "YYYY-MM" string, whatever the sheet holds.
+ *
+ * Google Sheets auto-coerces a cell written as "2026-11" into a real date,
+ * and getValues() then hands back a Date. Every comparison in this file
+ * matched a YYYY-MM string against that Date, so every one of them failed:
+ *   - saveIntake() never found the row to update, and appended a duplicate
+ *     on every submission
+ *   - getIntake() never found a month, so "load a past month" in the
+ *     newsletter and Instagram tools returned nothing
+ *   - the monthly reminder never saw a submission as made, and would have
+ *     chased clients for intakes they had already filled in
+ * None of it errored. It just quietly answered "no" every time.
+ *
+ * Local getters, not UTC: a Date from a sheet cell is built in the script's
+ * own timezone from the stored serial, which is the same timezone that
+ * created it, so the round-trip is exact. (The browser side sees the same
+ * value serialized to ISO and reads it as UTC — also correct there, since
+ * that string carries this offset in it.)
+ */
+function monthKey(value) {
+  // Object.prototype.toString, not `value instanceof Date`: instanceof
+  // compares against one realm's Date constructor and answers false for a
+  // Date built in another, which is exactly how this check fails silently
+  // — and a silent false here is what caused every bug listed above.
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return value.getFullYear() + '-' + ('0' + (value.getMonth() + 1)).slice(-2);
+  }
+  const s = String(value == null ? '' : value).trim();
+  const m = /^(\d{4})-(\d{2})/.exec(s);
+  return m ? m[1] + '-' + m[2] : s;
+}
+
+/* Writes an intake row with its Month and Timestamp columns forced to plain
+   text FIRST, so Sheets stores "2026-11" as the five characters it is
+   instead of reinterpreting it. This stops new rows acquiring the problem;
+   monthKey() above is what keeps the rows already written readable. */
+function writeIntakeRow(sheet, rowIndex, rowValues) {
+  sheet.getRange(rowIndex, 2, 1, 2).setNumberFormat('@');
+  sheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
 }
 
 function saveIntake(rowValues) {
@@ -592,15 +649,16 @@ function saveIntake(rowValues) {
   // column C onward one cell to the left.
   const sheet = getIntakesSheet();
   const data = sheet.getDataRange().getValues();
+  const wanted = monthKey(rowValues[1]);
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === rowValues[0] && data[i][1] === rowValues[1]) {
-      sheet.getRange(i + 1, 1, 1, rowValues.length).setValues([rowValues]);
-      journal(rowValues[0], 'saveIntake', 'updated ' + rowValues[1]);
+    if (data[i][0] === rowValues[0] && monthKey(data[i][1]) === wanted) {
+      writeIntakeRow(sheet, i + 1, rowValues);
+      journal(rowValues[0], 'saveIntake', 'updated ' + wanted);
       return { success: true, updated: true };
     }
   }
-  sheet.appendRow(rowValues);
-  journal(rowValues[0], 'saveIntake', 'appended ' + rowValues[1]);
+  writeIntakeRow(sheet, sheet.getLastRow() + 1, rowValues);
+  journal(rowValues[0], 'saveIntake', 'appended ' + wanted);
   return { success: true, updated: false };
 }
 
@@ -608,8 +666,17 @@ function listIntakeMonths(clientId) {
   const sheet = getIntakesSheet();
   const data = sheet.getDataRange().getValues();
   const months = [];
+  const seen = {};
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === clientId) months.push(data[i][1]);
+    if (data[i][0] !== clientId) continue;
+    // Normalised, and each month once: rows written before the fix can
+    // hold several entries for the same month, and a picker listing the
+    // same month twice asks the operator to choose between identical
+    // options.
+    const key = monthKey(data[i][1]);
+    if (seen[key]) continue;
+    seen[key] = true;
+    months.push(key);
   }
   return { months: months };
 }

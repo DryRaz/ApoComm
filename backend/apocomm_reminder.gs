@@ -39,7 +39,11 @@ function sendMonthlyIntakeReminders() {
 
   const submitted = {};
   for (let i = 1; i < intakesData.length; i++) {
-    if (intakesData[i][0]) submitted[intakesData[i][0] + '|' + intakesData[i][1]] = true;
+    // monthKey(), not the raw cell: Sheets stores the month as a real date,
+    // so comparing it to the YYYY-MM string built below never matched and
+    // this check silently passed every client through — they would have
+    // been chased for intakes they had already submitted.
+    if (intakesData[i][0]) submitted[intakesData[i][0] + '|' + monthKey(intakesData[i][1])] = true;
   }
 
   // Read Access_Tokens once rather than per client — see
