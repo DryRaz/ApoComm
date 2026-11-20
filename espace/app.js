@@ -43,6 +43,9 @@
       copyFailed: "Copy did not work — select the text and copy it by hand.",
       noMonthTitle: "Nothing yet",
       noMonthBody: "You have not sent us your news yet. As soon as you fill in the monthly form, your newsletter and your posts will appear here.",
+      renderFailTitle: "We couldn’t prepare this month",
+      renderFailBody: "Your news reached us — nothing you sent has been lost. Something went wrong on our side while putting it together. Please tell your Apostello contact, and they will sort it out.",
+      sectionFailed: "This part couldn’t be prepared. Your contact can sort it out.",
       noAccessTitle: "This link isn’t working",
       noAccessGeneric: "Ask your Apostello contact to send you a fresh link.",
       offlineTitle: "We can’t reach your file right now",
@@ -75,6 +78,9 @@
       copyFailed: "La copie n’a pas fonctionné — sélectionnez le texte et copiez-le à la main.",
       noMonthTitle: "Rien pour l’instant",
       noMonthBody: "Vous ne nous avez pas encore envoyé vos nouvelles. Dès que vous remplirez le formulaire mensuel, votre lettre et vos publications apparaîtront ici.",
+      renderFailTitle: "Nous n’avons pas pu préparer ce mois",
+      renderFailBody: "Vos nouvelles nous sont bien parvenues — rien de ce que vous avez envoyé n’est perdu. Quelque chose a bloqué de notre côté au moment de les mettre en forme. Signalez-le à votre interlocuteur Apostello, il s’en occupera.",
+      sectionFailed: "Cette partie n’a pas pu être préparée. Votre interlocuteur peut s’en occuper.",
       noAccessTitle: "Ce lien ne fonctionne pas",
       noAccessGeneric: "Demandez à votre interlocuteur Apostello de vous envoyer un nouveau lien.",
       offlineTitle: "Nous n’arrivons pas à ouvrir votre dossier",
@@ -196,7 +202,18 @@
     var entry = space.months[index];
     if (!entry) return;
 
-    var regFields = ApoComm.parseRow(space.regRow.join("\t"), ApoComm.REG_COLUMNS);
+    // backendRowToRegFields(), NOT parseRow(). parseRow() is the strict
+    // parser for a row a human pasted into a textarea: it demands exactly
+    // REG_COLUMNS.length columns and throws otherwise. The backend returns
+    // the sheet row as it stands — 38 values, the 36 real columns plus the
+    // two calculated ones — so joining it with tabs and feeding it to
+    // parseRow threw "expected 36, got 38" the moment a client had an
+    // intake to render. backendRowToRegFields() maps by index over the 36
+    // known names and ignores anything after them, which is what every
+    // other tool already does with a backend row. It also avoids
+    // round-tripping structured values through a tab-joined string, where
+    // a tab inside a free-text field would shift every later column.
+    var regFields = ApoComm.backendRowToRegFields(space.regRow);
     var intakeFields = ApoComm.backendRowToIntakeFields(entry.row);
 
     var nlSecurity = ApoComm.Newsletter.evaluateSecurityGate(regFields);
@@ -207,16 +224,27 @@
       return;
     }
 
-    var nl = ApoComm.Newsletter.build(regFields, intakeFields, nlSecurity);
-    el("newsletter-subject").textContent = nl.subject;
-    el("newsletter-body").textContent = nl.body;
+    // Each generator is caught on its own. They share their inputs but not
+    // their failure: a newsletter that throws should not also cost the
+    // missionary their Instagram posts, and vice versa.
+    try {
+      var nl = ApoComm.Newsletter.build(regFields, intakeFields, nlSecurity);
+      el("newsletter-subject").textContent = nl.subject;
+      el("newsletter-body").textContent = nl.body;
+    } catch (e) {
+      console.error("[ApoComm.Espace] newsletter:", e);
+      el("newsletter-subject").textContent = "";
+      el("newsletter-body").textContent = T.sectionFailed;
+    }
 
     var posts = [];
     try {
       var ig = ApoComm.Instagram.build(regFields, intakeFields, ApoComm.Instagram.evaluateSecurityGate(regFields));
       posts = ig.posts || [];
     } catch (e) {
-      posts = [];
+      console.error("[ApoComm.Espace] instagram:", e);
+      el("instagram-posts").innerHTML = "<p>" + ApoComm.escapeHtml(T.sectionFailed) + "</p>";
+      return;
     }
 
     var host = el("instagram-posts");
@@ -278,32 +306,59 @@
     var token = readToken();
     if (!token) return refuse("invalid");
 
+    /* Two handlers, not one .catch() on the end of the chain.
+     *
+     * A .catch() there swallows BOTH a rejected fetch and any exception
+     * thrown while rendering, and reported both as "we can't reach your
+     * file". That is a lie in the second case and an expensive one: the
+     * data had arrived, the greeting had already been written to the page,
+     * and the missionary was told to come back later for a server that was
+     * never down. Passing the failure handler as the second argument to
+     * .then() means it only ever sees a rejected fetch; anything the
+     * success path throws is caught below, where we know the backend was
+     * fine and can say so. */
     ApoComm.fetchClientSpace(token).then(function (result) {
       if (!result.space) return refuse(result.offline ? "offline" : "invalid");
-
       space = result.space;
-      applyLanguage(ApoComm.detectLanguage(space.primaryLanguage));
-      setText("greeting", T.greeting(space.firstName));
-      show("content", true);
-
-      renderSite();
-
-      if (!space.canGenerate) {
-        show("human-only", true);
-        return;
+      try {
+        renderSpace();
+      } catch (e) {
+        console.error("[ApoComm.Espace] render:", e);
+        renderFailed();
       }
-      if (!space.months.length) {
-        show("no-month", true);
-        return;
-      }
-
-      show("month-section", true);
-      renderMonthOptions();
-      renderMonth(0);
-      wireCopy();
-    }).catch(function () {
+    }, function (e) {
+      console.error("[ApoComm.Espace] fetch:", e);
       refuse("offline");
     });
+  }
+
+  function renderSpace() {
+    applyLanguage(ApoComm.detectLanguage(space.primaryLanguage));
+    setText("greeting", T.greeting(space.firstName));
+    show("content", true);
+
+    renderSite();
+
+    if (!space.canGenerate) return show("human-only", true);
+    if (!space.months.length) return show("no-month", true);
+
+    show("month-section", true);
+    renderMonthOptions();
+    renderMonth(0);
+    wireCopy();
+  }
+
+  /* The record was read and the page is theirs — only the content could not
+     be assembled. So this keeps the greeting and the site link on screen and
+     replaces the month section alone, rather than wiping the page down to a
+     refusal. It does not claim anyone has been notified, because nothing
+     here notifies anyone. */
+  function renderFailed() {
+    show("month-section", false);
+    show("no-month", false);
+    setText("render-failed-title", T.renderFailTitle);
+    setText("render-failed-body", T.renderFailBody);
+    show("render-failed", true);
   }
 
   start();
