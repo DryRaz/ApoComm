@@ -96,6 +96,10 @@
   var el = function (id) { return document.getElementById(id); };
   var T = TEXT.english;
   var space = null;
+  // The months actually offered in the picker: space.months with repeats
+  // of the same month collapsed. renderMonth() indexes into THIS, not
+  // space.months, or the option values stop matching the rows.
+  var visibleMonths = [];
 
   function setText(id, value) { var n = el(id); if (n) n.textContent = value; }
 
@@ -178,19 +182,46 @@
     });
   }
 
-  // "2026-11" is how the sheet keys a month; "novembre 2026" is how a
-  // person reads one. Anything that isn't YYYY-MM is shown as it came.
-  function monthLabel(key) {
-    var m = /^(\d{4})-(\d{2})$/.exec(String(key || ""));
-    if (!m) return String(key || "");
-    var name = T.months[Number(m[2]) - 1];
-    return name ? name + " " + m[1] : key;
+  /* "2026-11" is how the sheet is meant to key a month; "novembre 2026" is
+     how a person reads one.
+
+     The sheet does not always hold the string, though: Google Sheets
+     auto-coerces a cell written as "2026-11" into a real date, and Apps
+     Script then hands it back as a Date, which arrives here JSON-serialized
+     as "2026-11-01T07:00:00.000Z". Shown raw, that is what a missionary
+     reads in their own month picker. So this accepts either shape. The
+     underlying coercion is a backend defect and is fixed there too — this
+     is what keeps the rows already written that way readable. */
+  function monthKey(value) {
+    var p = ApoComm.monthParts(value);
+    return p ? p.year + "-" + ("0" + p.month).slice(-2) : "";
   }
 
+  function monthLabel(value) {
+    var p = ApoComm.monthParts(value);
+    if (!p) return String(value == null ? "" : value);
+    var name = T.months[p.month - 1];
+    return name ? name + " " + p.year : p.year + "-" + ("0" + p.month).slice(-2);
+  }
+
+  /* One entry per month, not one per row. saveIntake appends rather than
+     replacing, so a missionary who submits twice for the same month has two
+     rows, and listing both offers them a choice between two things with the
+     same name. The first wins, matching the order the backend sends (most
+     recent month first). Collapsing them here is a display decision only —
+     the duplicate rows are a backend defect and are fixed there. */
   function renderMonthOptions() {
     var select = el("month-select");
     select.innerHTML = "";
-    space.months.forEach(function (m, i) {
+    var seen = {};
+    visibleMonths = [];
+    space.months.forEach(function (m) {
+      var key = monthKey(m.month) || String(m.month);
+      if (seen[key]) return;
+      seen[key] = true;
+      visibleMonths.push(m);
+    });
+    visibleMonths.forEach(function (m, i) {
       var opt = document.createElement("option");
       opt.value = String(i);
       opt.textContent = monthLabel(m.month);
@@ -199,7 +230,7 @@
   }
 
   function renderMonth(index) {
-    var entry = space.months[index];
+    var entry = visibleMonths[index];
     if (!entry) return;
 
     // backendRowToRegFields(), NOT parseRow(). parseRow() is the strict

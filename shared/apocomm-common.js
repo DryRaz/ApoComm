@@ -290,6 +290,32 @@
      rewriting it: nothing is added but the terminal mark the writer left
      off. A closing quote or bracket after the mark counts as terminated,
      and so does a dash or ellipsis the writer chose deliberately. */
+  /* Year and month out of whatever the sheet actually holds.
+   *
+   * The intake's Month and SubmissionDate columns are written as strings
+   * ("2026-11", "2026-11-20"), but Google Sheets auto-coerces both shapes
+   * into real dates, and Apps Script then returns Date objects that reach
+   * the browser as "2026-11-01T07:00:00.000Z". Code that matched
+   * /^\d{4}-\d{2}(-\d{2})?$/ therefore saw nothing at all — which is how a
+   * newsletter subject came out as "Andry's Update — " with the month
+   * missing and the dash left dangling. Accepts the intended string, the
+   * coerced ISO form, or any other date JavaScript can parse; returns null
+   * when it is none of those, so callers can leave the month out
+   * altogether rather than print an empty one.
+   */
+  ApoComm.monthParts = function (value) {
+    var s = String(value == null ? "" : value).trim();
+    if (!s) return null;
+    var m = /^(\d{4})-(\d{2})/.exec(s);
+    if (m) return { year: m[1], month: parseInt(m[2], 10) };
+    var d = new Date(s);
+    if (isNaN(d.getTime())) return null;
+    // UTC, deliberately: the serialized form carries the sheet's own
+    // offset, and reading it back in the viewer's zone would slide a
+    // month-start backwards for anyone west of it.
+    return { year: String(d.getUTCFullYear()), month: d.getUTCMonth() + 1 };
+  };
+
   ApoComm.endSentence = function (text) {
     var t = String(text == null ? "" : text).trim();
     if (!t) return "";

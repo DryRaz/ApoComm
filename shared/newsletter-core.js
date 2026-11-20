@@ -36,6 +36,8 @@
     english: {
       subjectFirst: function (name) { return "Meet " + name + " — My First Update"; },
       subjectMonthly: function (name, month, year) { return name + "'s Update — " + month + " " + year; },
+      // Used when the intake's date can't be read: no month, so no dash.
+      subjectPlain: function (name) { return name + "'s Update"; },
       introDetailed: function (summary, dateStr) {
         return "Welcome to my very first update! " + summary + " I began this chapter on " + dateStr + ".";
       },
@@ -61,6 +63,7 @@
     french: {
       subjectFirst: function (name) { return "À la rencontre de " + name + " — Ma première lettre"; },
       subjectMonthly: function (name, month, year) { return "Des nouvelles de " + name + " — " + month + " " + year; },
+      subjectPlain: function (name) { return "Des nouvelles de " + name; },
       introDetailed: function (summary, dateStr) {
         return "Bienvenue dans ma toute première lettre ! " + summary + " J'ai commencé cette étape le " + dateStr + ".";
       },
@@ -334,11 +337,16 @@
 
     var body = paragraphs.join("\n\n");
 
-    var subject;
-    var subDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(intakeFields.SubmissionDate);
-    var monthName = subDate ? (MONTHS[lang] || MONTHS.english)[parseInt(subDate[2], 10) - 1] : "";
-    var year = subDate ? subDate[1] : "";
-    subject = isFirst ? t.subjectFirst(name) : t.subjectMonthly(name, monthName, year);
+    // When the date is unreadable the subject drops the month entirely
+    // rather than printing "Name's Update — " with a dangling dash. A
+    // subject line is the first thing a supporter sees; a visibly broken
+    // one costs more than a missing month.
+    var parts = ApoComm.monthParts(intakeFields.SubmissionDate);
+    var subject = isFirst
+      ? t.subjectFirst(name)
+      : (parts
+          ? t.subjectMonthly(name, (MONTHS[lang] || MONTHS.english)[parts.month - 1], parts.year)
+          : t.subjectPlain(name));
 
     var avoidSubject = ApoComm.applyAvoidList(subject, intakeFields.AnythingToAvoid);
     var avoidBody = ApoComm.applyAvoidList(body, intakeFields.AnythingToAvoid);
